@@ -10,6 +10,9 @@
     "hedera:keygen": "tsx scripts/hedera-keygen.ts",
     "hedera:resolve": "tsx scripts/hedera-resolve.ts",
     "hedera:setup": "tsx scripts/hedera-setup.ts",
+    "test": "tsx scripts/test-x402.ts && tsx scripts/test-settlement.ts",
+    "test:x402": "tsx scripts/test-x402.ts",
+    "test:settlement": "tsx scripts/test-settlement.ts",
     "e2e": "tsx scripts/e2e-hedera-pay.ts",
     "seed": "tsx scripts/seed-demo.ts"
   },

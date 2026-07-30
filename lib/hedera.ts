@@ -138,11 +138,19 @@ export interface HederaOperator {
   client: Client
 }
 
+// A Hedera Client owns gRPC connections to the network. Building one per call
+// would leak a connection pool on every payout, so the operator client is a
+// process singleton. Scripts should call closeHederaClients() when done, or the
+// open connections keep Node's event loop alive and the process never exits.
+let operatorSingleton: HederaOperator | null = null
+
 /**
  * The treasury/operator account. It pays workers, funds the faucet, and submits
  * HCS messages. It never signs agent payments — the agent holds its own key.
  */
 export function getOperator(): HederaOperator {
+  if (operatorSingleton) return operatorSingleton
+
   const accountId = process.env.HEDERA_OPERATOR_ID
   const rawKey = process.env.HEDERA_OPERATOR_KEY
   if (!accountId) throw new Error('HEDERA_OPERATOR_ID not set')
@@ -153,7 +161,24 @@ export function getOperator(): HederaOperator {
   client.setOperator(AccountId.fromString(accountId), privateKey)
   // Cap what a single misconfigured call can cost the treasury.
   client.setDefaultMaxTransactionFee(new Hbar(Number(process.env.HEDERA_MAX_TX_FEE_HBAR ?? '2')))
-  return { accountId: AccountId.fromString(accountId).toString(), privateKey, client }
+
+  operatorSingleton = {
+    accountId: AccountId.fromString(accountId).toString(),
+    privateKey,
+    client,
+  }
+  return operatorSingleton
+}
+
+/**
+ * Release network connections. Long-running servers never need this; scripts do,
+ * because an open Client keeps the process alive indefinitely.
+ */
+export function closeHederaClients(): void {
+  if (operatorSingleton) {
+    operatorSingleton.client.close()
+    operatorSingleton = null
+  }
 }
 
 /** The account payments are made out to. Defaults to the operator. */

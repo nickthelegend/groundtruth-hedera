@@ -52,14 +52,22 @@ interface MirrorTransaction {
 }
 
 /**
- * Mirror Nodes lag consensus by a beat. Poll briefly rather than declaring a
- * just-settled payment invalid because the record hasn't propagated yet.
+ * Fetch every record Hedera holds for a transaction id.
+ *
+ * One id can map to SEVERAL records: the top-level transaction (nonce 0) plus
+ * child records such as the CRYPTOUPDATEACCOUNT emitted when a payer's account
+ * was auto-created from an EVM alias. Those children carry an empty transfer
+ * list and are frequently returned FIRST, so reading `transactions[0]` finds no
+ * payment and wrongly reports a good payment as unconfirmed. Always scan them all.
+ *
+ * Mirror Nodes also lag consensus by a beat, so poll briefly rather than
+ * rejecting a just-settled payment that has not propagated yet.
  */
-async function fetchTransaction(
+async function fetchTransactionRecords(
   txId: string,
-  attempts = 5,
-  delayMs = 1200
-): Promise<MirrorTransaction | null> {
+  attempts = 6,
+  delayMs = 1500
+): Promise<MirrorTransaction[]> {
   const url = `${MIRROR_NODE_URL}/api/v1/transactions/${toMirrorTxId(txId)}`
 
   for (let i = 0; i < attempts; i++) {
@@ -67,15 +75,14 @@ async function fetchTransaction(
       const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
       if (res.ok) {
         const data = (await res.json()) as { transactions?: MirrorTransaction[] }
-        const tx = data.transactions?.[0]
-        if (tx) return tx
+        if (data.transactions?.length) return data.transactions
       }
     } catch {
       // Network hiccup — fall through to the retry.
     }
     if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs))
   }
-  return null
+  return []
 }
 
 /**
@@ -100,19 +107,25 @@ export async function verifyPaymentOnMirror(params: {
     return { valid: false, reason: e instanceof Error ? e.message : 'payee not configured' }
   }
 
-  const tx = await fetchTransaction(txId)
-  if (!tx) return { valid: false, reason: 'transaction not found on mirror node', txId }
-  if (tx.result !== 'SUCCESS') {
-    return { valid: false, reason: `transaction result ${tx.result}`, txId }
+  const records = await fetchTransactionRecords(txId)
+  if (records.length === 0) {
+    return { valid: false, reason: 'transaction not found on mirror node', txId }
   }
 
-  // Positive entries credit an account, negative entries debit it. Find the
-  // credit to our payee in whichever transfer list matches the payment asset.
-  const credits: MirrorTransfer[] = IS_HBAR
-    ? (tx.transfers ?? [])
-    : (tx.token_transfers ?? []).filter((t) => t.token_id === PAYMENT_ASSET_ID)
+  const successful = records.filter((r) => r.result === 'SUCCESS')
+  if (successful.length === 0) {
+    return { valid: false, reason: `transaction result ${records[0].result}`, txId }
+  }
 
-  const credited = credits
+  // Positive entries credit an account, negative entries debit it. Gather the
+  // relevant transfer entries across every successful record for this id.
+  const entries: MirrorTransfer[] = successful.flatMap((r) =>
+    IS_HBAR
+      ? (r.transfers ?? [])
+      : (r.token_transfers ?? []).filter((t) => t.token_id === PAYMENT_ASSET_ID)
+  )
+
+  const credited = entries
     .filter((t) => t.account === expectedPayee)
     .reduce((sum, t) => sum + BigInt(t.amount), 0n)
 
@@ -120,22 +133,29 @@ export async function verifyPaymentOnMirror(params: {
     return {
       valid: false,
       reason:
-        credited === 0n
+        credited <= 0n
           ? `no ${IS_HBAR ? 'HBAR' : PAYMENT_ASSET_ID} credited to ${expectedPayee}`
           : `credited ${credited} < required ${requiredUnits}`,
       txId,
     }
   }
 
-  // The payer is whoever was debited. On Hedera the fee payer may differ from
-  // the sender, so derive the payer from the transfer list rather than assuming
-  // it is the account in the transaction id.
-  const debited = credits.find((t) => BigInt(t.amount) < 0n)
-  const payer = debited?.account
+  // The payer is whoever was debited the payment amount. On Hedera the fee payer
+  // is often a DIFFERENT account from the sender (here, the x402 facilitator),
+  // and it appears in the same transfer list paying network fees. Match on the
+  // amount so we report the actual sender rather than the fee payer.
+  const payer =
+    entries.find((t) => BigInt(t.amount) === -credited)?.account ??
+    entries
+      .filter((t) => BigInt(t.amount) < 0n)
+      .sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? -1 : 1))[0]?.account
 
   if (expectedPayer && payer && expectedPayer !== payer) {
     return { valid: false, reason: `payer ${payer} does not match expected ${expectedPayer}`, txId }
   }
+
+  const transferRecord =
+    successful.find((r) => (r.transfers ?? r.token_transfers ?? []).length > 0) ?? successful[0]
 
   return {
     valid: true,
@@ -145,6 +165,6 @@ export async function verifyPaymentOnMirror(params: {
     amountUnits: credited,
     txId,
     explorer: explorerTx(txId),
-    consensusTimestamp: tx.consensus_timestamp,
+    consensusTimestamp: transferRecord.consensus_timestamp,
   }
 }

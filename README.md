@@ -9,6 +9,16 @@
 
 Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
+**Live on testnet** — real transactions, verifiable now:
+
+| | |
+|---|---|
+| x402 payment settled | [`0.0.7162784@1785448933.726761986`](https://hashscan.io/testnet/transaction/0.0.7162784@1785448933.726761986) |
+| Oracle payout | [`0.0.9847867@1785448990.259653822`](https://hashscan.io/testnet/transaction/0.0.9847867@1785448990.259653822) |
+| Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
+
+Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+
 ---
 
 ## The problem
@@ -127,7 +137,19 @@ pnpm dev
 
 ### Prove it works
 
-With the server running, this does a complete real payment on Hedera testnet — 402 challenge, signed transfer, facilitator settlement, Mirror Node confirmation, HashScan links:
+Two suites run against live Hedera testnet and make real transactions. Neither needs a server or a database:
+
+```bash
+pnpm test              # 30 assertions across both suites
+pnpm test:x402         # challenge → sign → verify → settle → mirror-confirm
+pnpm test:settlement   # native payout + HCS proof anchor + money maths
+```
+
+Both include negative cases — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
+
+Last run: **30 passed, 0 failed.** Real transaction links and full output are in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+
+For the complete task lifecycle end to end (needs the server running, plus Supabase and Groq):
 
 ```bash
 pnpm e2e

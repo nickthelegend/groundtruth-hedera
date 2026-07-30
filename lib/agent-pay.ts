@@ -96,8 +96,16 @@ async function fetchChallenge(resourceUrl: string): Promise<PaymentRequired> {
  * Handles the two Hedera-specific preconditions an EVM chain does not have:
  * the agent must be associated with the HTS token before it can send it, and
  * balances are queried per-token rather than per-contract.
+ *
+ * `presetChallenge` short-circuits the HTTP round-trip. Normal callers omit it
+ * and let the agent fetch a real 402; tests pass one in so the payment path can
+ * be exercised without a running server.
  */
-export async function agentPay(budget: string, resourceUrl: string): Promise<AgentPayResult> {
+export async function agentPay(
+  budget: string,
+  resourceUrl: string,
+  presetChallenge?: PaymentRequired
+): Promise<AgentPayResult> {
   const steps: string[] = []
   const { accountId, privateKey, client } = agentSigner()
   const requiredUnits = toUnits(budget)
@@ -147,8 +155,14 @@ export async function agentPay(budget: string, resourceUrl: string): Promise<Age
   }
 
   // ── 402 round-trip ──────────────────────────────────────────────────────────
-  steps.push(`Requesting 402 challenge from ${resourceUrl}...`)
-  const challenge = await fetchChallenge(resourceUrl)
+  let challenge: PaymentRequired
+  if (presetChallenge) {
+    steps.push('Using a pre-supplied 402 challenge (no HTTP round-trip)')
+    challenge = presetChallenge
+  } else {
+    steps.push(`Requesting 402 challenge from ${resourceUrl}...`)
+    challenge = await fetchChallenge(resourceUrl)
+  }
   const accepted = challenge.accepts[0]
   steps.push(
     `Challenge: ${accepted.amount} atomic units of ${accepted.asset} to ${accepted.payTo} (${accepted.network})`
