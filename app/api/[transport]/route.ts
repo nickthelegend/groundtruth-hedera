@@ -221,6 +221,10 @@ const handler = createMcpHandler(
                 intent: task.intent,
                 // Proof is available once the human submits (awaiting your review) and after.
                 proof: (awaitingReview || task.status === 'verified') ? (task.proof_payload ?? null) : null,
+                // Signed, short-lived links to the actual photos — this is the
+                // deliverable the agent paid for, not just a list of keys.
+                proof_urls: (awaitingReview || task.status === 'verified') ? (task.proof_urls ?? null) : null,
+                proof_urls_expire_in_seconds: task.proof_urls_expire_in_seconds ?? null,
                 ai_vision: task.result?.vision ?? null,
                 integrity_checks: task.result?.checks ?? null,
                 awaiting_your_review: awaitingReview,

@@ -107,24 +107,43 @@ export function explorerTopic(topicId: string): string {
 
 // ── Client construction ───────────────────────────────────────────────────────
 
+// DER algorithm identifiers. A DER-encoded private key names its own curve, so
+// we read it instead of guessing.
+const OID_ED25519 = '2b6570' // 1.3.101.112
+const OID_SECP256K1 = '2b8104000a' // 1.3.132.0.10
+
 /**
- * Hedera keys come in two flavours and the Portal hands out ECDSA by default,
- * but plenty of accounts are ED25519. Try the explicit hint first, then fall
- * back to the SDK's generic parser rather than failing on a valid key.
+ * Hedera keys come in two flavours: the Portal hands out ECDSA by default, but
+ * plenty of accounts are ED25519.
+ *
+ * Do NOT resolve this by trying one parser and falling back on throw.
+ * `PrivateKey.fromStringECDSA` accepts an ED25519 DER string without
+ * complaining and silently derives the WRONG public key — which means the wrong
+ * account id, and signatures that fail for no visible reason. Detect the curve
+ * from the DER algorithm identifier instead.
  */
 export function parsePrivateKey(raw: string): PrivateKey {
-  const key = raw.trim()
+  const key = raw.trim().replace(/^0x/i, '')
+
   const hint = (process.env.HEDERA_KEY_TYPE ?? '').toUpperCase()
   if (hint === 'ED25519') return PrivateKey.fromStringED25519(key)
   if (hint === 'ECDSA') return PrivateKey.fromStringECDSA(key)
+
+  // A DER key starts with a SEQUENCE tag and is longer than a bare 32-byte hex
+  // key. Only then is an OID match meaningful — raw key material could contain
+  // those bytes by chance.
+  const lower = key.toLowerCase()
+  if (lower.startsWith('30') && lower.length > 64) {
+    if (lower.includes(OID_ED25519)) return PrivateKey.fromStringED25519(key)
+    if (lower.includes(OID_SECP256K1)) return PrivateKey.fromStringECDSA(key)
+  }
+
+  // Raw 32-byte hex carries no curve information. The Portal default is ECDSA,
+  // so prefer it and let the caller set HEDERA_KEY_TYPE to override.
   try {
     return PrivateKey.fromStringECDSA(key)
   } catch {
-    try {
-      return PrivateKey.fromStringED25519(key)
-    } catch {
-      return PrivateKey.fromString(key)
-    }
+    return PrivateKey.fromStringED25519(key)
   }
 }
 

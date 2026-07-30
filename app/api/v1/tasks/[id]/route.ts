@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTask } from '@/lib/db'
+import { signProofUrls, proofUrlTtlSeconds } from '@/lib/storage'
+import type { ProofPayload } from '@/lib/types'
 
 // Never cache task reads — the UI polls this for live status (claimed →
 // submitted → verified). Without this, Next caches the first response (usually
@@ -15,6 +17,17 @@ export async function GET(
     const task = await getTask(params.id)
     if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    const proof = task.proof_payload as ProofPayload | null
+
+    // The photo is the deliverable, so hand back retrievable links rather than
+    // opaque storage keys. Signed and short-lived: proofs can show storefronts,
+    // addresses and people, so they are never served from a public URL.
+    let proofUrls: string[] | undefined
+    if (proof?.type === 'photo' && proof.storageKeys?.length) {
+      const signed = await signProofUrls(proof.storageKeys)
+      proofUrls = proof.storageKeys.map(k => signed[k]).filter(Boolean)
+    }
+
     // Return safe public view — no payment_ref, no internal fields.
     // proof_payload IS the deliverable, so the paying agent can review it.
     return NextResponse.json({
@@ -24,7 +37,10 @@ export async function GET(
       budget_usdt: task.budget_usdt,
       status: task.status,
       result: task.result,
-      proof_payload: task.proof_payload ?? null,
+      proof_payload: proof ?? null,
+      ...(proofUrls
+        ? { proof_urls: proofUrls, proof_urls_expire_in_seconds: proofUrlTtlSeconds }
+        : {}),
       created_at: task.created_at,
       expires_at: task.expires_at,
     })

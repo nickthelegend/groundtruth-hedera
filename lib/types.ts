@@ -9,17 +9,37 @@ export type TaskStatus =
   | 'failed'
   | 'expired'
 
+/**
+ * Legal status moves, enforced by `transition()` in lib/db.
+ *
+ * Two entries look surprising and are deliberate:
+ *
+ *  - `claimed → verified | failed`. Submission resolves a task in ONE
+ *    compare-and-swap rather than writing 'submitted' and then resolving it.
+ *    Two writes would leave a window where a task is submitted-but-unresolved,
+ *    and a concurrent request could resolve it twice.
+ *
+ *  - `failed → …`. Failure is not terminal for the worker who caused it: an
+ *    honest oracle who blurred the freshness code can resubmit within the task
+ *    window instead of being locked out. Only `verified` and `expired` are
+ *    genuinely final.
+ */
 export const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   pending:      ['claimed', 'expired'],
-  claimed:      ['submitted', 'expired'],
+  claimed:      ['submitted', 'needs_review', 'verified', 'failed', 'expired'],
   submitted:    ['needs_review', 'verified', 'failed'],
   needs_review: ['verified', 'failed'],
   verified:     [],
-  failed:       [],
+  failed:       ['submitted', 'needs_review', 'verified'],
   expired:      [],
 }
 
+/**
+ * A same-status write (`from === to`) is always allowed: settlement merges its
+ * result into an already-verified task without changing its status.
+ */
 export function canTransition(from: TaskStatus, to: TaskStatus): boolean {
+  if (from === to) return true
   return VALID_TRANSITIONS[from].includes(to)
 }
 

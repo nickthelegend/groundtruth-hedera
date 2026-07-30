@@ -19,11 +19,16 @@ export async function POST(req: NextRequest) {
     req.headers.get('x-payment') ??
     req.headers.get('payment-signature')
 
+  // Demo bypass creates a task WITHOUT payment, so it is off by default and
+  // needs two independent opt-ins: a configured ADMIN_SECRET *and* an explicit
+  // ALLOW_DEMO_BYPASS=true. A single stray env var should never turn a paid API
+  // into a free one, and on a payments product a reachable bypass is a
+  // liability — so it is refused outright in production.
   const demoKey = req.headers.get('X-DEMO-KEY')
-  // Demo bypass is enabled ONLY when ADMIN_SECRET is explicitly configured.
-  // No hardcoded fallback secret — an unset env var means demo mode is off.
   const adminSecret = process.env.ADMIN_SECRET
-  const isDemoMode = !!adminSecret && demoKey === adminSecret
+  const bypassAllowed =
+    process.env.ALLOW_DEMO_BYPASS === 'true' && process.env.NODE_ENV !== 'production'
+  const isDemoMode = bypassAllowed && !!adminSecret && demoKey === adminSecret
 
   if (!paymentHeader && !isDemoMode) {
     return NextResponse.json(await buildChallenge(), { status: 402 })

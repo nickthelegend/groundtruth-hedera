@@ -16,12 +16,25 @@ Every claim below is backed by a transaction anyone can open on HashScan.
 ## Reproduce it
 
 ```bash
-pnpm test              # both suites below
-pnpm test:x402         # payment rail
-pnpm test:settlement   # payout + proof anchoring
+pnpm test              # 102 unit + integration tests, offline, ~1s
+pnpm test:chain        # 30 assertions against live Hedera testnet
 ```
 
-Both run against live Hedera testnet and make real transactions. Results as of the last run: **30 passed, 0 failed**.
+**132 passing, 0 failing.**
+
+| Suite | Tests | Needs network? |
+|---|---|---|
+| `test/money.test.ts` | 13 | no |
+| `test/types.test.ts` | 18 | no |
+| `test/hedera.test.ts` | 17 | no |
+| `test/mirror-verify.test.ts` | 11 | no |
+| `test/x402.test.ts` | 12 | no |
+| `test/api-human-do.test.ts` | 16 | no |
+| `test/api-lifecycle.test.ts` | 15 | no |
+| `scripts/test-x402.ts` | 15 | **live testnet** |
+| `scripts/test-settlement.ts` | 15 | **live testnet** |
+
+The offline suites run in CI on every push. The chain suites spend real HBAR, so they are run deliberately and never in CI.
 
 ---
 
@@ -124,7 +137,7 @@ Two details worth pointing at:
 
 ---
 
-## Two bugs these tests caught
+## Four bugs these tests caught
 
 Worth recording, because both were silent and both would have broken the demo.
 
@@ -136,8 +149,20 @@ The same fix corrected payer attribution: the largest debit is the *fee payer*, 
 **2. Decimals were hardcoded to 6.**
 `toUnits` assumed a 6-decimal asset. HBAR is quoted in tinybars at 8, so a task priced `"2.00"` would have charged **0.02 HBAR** — a 100× underpayment, silently. `lib/money.ts` now derives its scale from the configured asset.
 
+**3. ED25519 keys were parsed as ECDSA, silently.**
+`parsePrivateKey` tried `PrivateKey.fromStringECDSA` first and fell back on throw. But the SDK does **not** throw on an ED25519 DER string — it accepts it and derives a *different* public key, so the account id is wrong and every signature fails for no visible reason. Hedera Portal issues both key types, so roughly half of all users would have hit this. Now the curve is read from the DER algorithm identifier instead of guessed.
+
+**4. The task state machine was decorative.**
+`VALID_TRANSITIONS` and `canTransition` were exported and looked authoritative, but `transition()` in `lib/db.ts` did a bare compare-and-swap on status and never consulted them. Any illegal move — `pending → verified`, paying out for work nobody did — was one mistaken call away. `transition()` now enforces the machine, and the declared transitions were corrected to match what the code legitimately does (submission resolves in a single CAS from `claimed`; `failed` is retryable by the same worker).
+
+---
+
+## Proof storage
+
+Photos were previously never stored: `storageKeys` were fabricated from the uploaded filename and no upload ever happened, so the deliverable an agent paid for did not exist. Proofs are now uploaded to a private Supabase Storage bucket, keyed by content hash rather than by the worker-supplied filename, and handed back as short-lived signed URLs on `task_status`. A failed upload returns 502 and leaves the task unresolved, because a task marked verified with no retrievable proof is worse than a failed submission.
+
 ---
 
 ## Not covered here
 
-The task lifecycle (claim → submit proof → notary → payout) is exercised by `pnpm e2e`, which needs a running server with Supabase and Groq configured. The on-chain half of that flow — payment in, payout out, proof anchored — is what the two suites above prove.
+The full lifecycle against a live database — claim → submit → notary → payout — is exercised by `pnpm e2e`, which needs a running server with Supabase and Groq configured. Offline, the same route logic is covered by `test/api-lifecycle.test.ts` against an in-memory fake that reimplements the schema's real constraints (payments primary key, unique `tx_hash` index, status transition rules), so the replay guard and payout gating cannot regress silently.

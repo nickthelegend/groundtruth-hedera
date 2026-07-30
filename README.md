@@ -137,17 +137,18 @@ pnpm dev
 
 ### Prove it works
 
-Two suites run against live Hedera testnet and make real transactions. Neither needs a server or a database:
-
 ```bash
-pnpm test              # 30 assertions across both suites
-pnpm test:x402         # challenge → sign → verify → settle → mirror-confirm
-pnpm test:settlement   # native payout + HCS proof anchor + money maths
+pnpm test         # 102 unit + integration tests, offline, ~1s
+pnpm test:chain   # 30 assertions against live Hedera testnet, real transactions
 ```
 
-Both include negative cases — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
+**132 passing, 0 failing.**
 
-Last run: **30 passed, 0 failed.** Real transaction links and full output are in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+`pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push.
+
+`pnpm test:chain` spends real HBAR: it builds a 402 challenge, signs a Hedera transfer, settles it through the facilitator, confirms it on a public Mirror Node, pays an oracle, and anchors a proof to HCS. Negative cases included — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
+
+Real transaction links, full output, and the four bugs these tests caught are in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 For the complete task lifecycle end to end (needs the server running, plus Supabase and Groq):
 

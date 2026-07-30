@@ -65,8 +65,8 @@ interface MirrorTransaction {
  */
 async function fetchTransactionRecords(
   txId: string,
-  attempts = 6,
-  delayMs = 1500
+  attempts = Number(process.env.MIRROR_LOOKUP_ATTEMPTS ?? '6'),
+  delayMs = Number(process.env.MIRROR_LOOKUP_DELAY_MS ?? '1500')
 ): Promise<MirrorTransaction[]> {
   const url = `${MIRROR_NODE_URL}/api/v1/transactions/${toMirrorTxId(txId)}`
 

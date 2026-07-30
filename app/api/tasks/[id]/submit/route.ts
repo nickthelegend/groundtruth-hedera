@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTask, transition, recordProofHash, recentProofHashes, bumpWorker } from '@/lib/db'
 import { verifyProof } from '@/lib/verify'
 import { settleTask } from '@/lib/settle'
+import { uploadProofImages } from '@/lib/storage'
 import { notaryReview } from '@/lib/notary'
 import type { ProofPayload, ProofSpec, NotaryVerdict } from '@/lib/types'
 
@@ -59,9 +60,27 @@ async function handleSubmit(req: NextRequest, params: { id: string }) {
       const buf = Buffer.from(await photo.arrayBuffer())
       imageBuffers.push(buf)
     }
+
+    // The photo IS the deliverable the agent paid for, so it must be persisted
+    // before we can call the task verified. If the upload fails we stop here
+    // rather than marking a task complete with no retrievable proof.
+    let storageKeys: string[]
+    try {
+      const stored = await uploadProofImages(params.id, imageBuffers)
+      storageKeys = stored.map(s => s.key)
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error: 'Could not store proof — nothing was submitted, please try again',
+          detail: e instanceof Error ? e.message : String(e),
+        },
+        { status: 502 }
+      )
+    }
+
     proofPayload = {
       type: 'photo',
-      storageKeys: photos.map(p => `${params.id}/${p.name}`),
+      storageKeys,
       submittedAt: new Date().toISOString(),
     }
   } else {

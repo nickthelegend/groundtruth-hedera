@@ -2,6 +2,12 @@ import Link from 'next/link'
 import { LogoMark } from './logo'
 import LiveNetwork from './live-network'
 
+// Price comes from the same env the 402 challenge is built from, so the number
+// on the landing page cannot drift from the number an agent is actually charged.
+const PRICE_LABEL = `${process.env.ASP_PRICE_USDT ?? '2.00'} ${
+  (process.env.PAYMENT_ASSET_ID ?? '') === '0.0.0' ? 'HBAR' : 'USDC'
+}`
+
 const FLOW = [
   { label: 'AI asks', desc: 'An agent calls human_do via MCP', emoji: '🤖', c: 'var(--info)' },
   { label: 'Escrow', desc: 'USDC locked on Hedera', emoji: '🔒', c: 'var(--accent)' },
@@ -61,9 +67,11 @@ export default function Home() {
             {/* stat chips */}
             <div className="fade-up fade-up-5 grid grid-cols-3 gap-3 max-w-md mx-auto lg:mx-0">
               {[
-                { v: '$2', s: 'per task', c: 'var(--accent)' },
-                { v: '~8 min', s: 'avg completion', c: 'var(--good)' },
-                { v: 'Hedera', s: 'settled on-chain', c: 'var(--info)' },
+                // Every figure here is real: the configured price, Hedera's
+                // published transfer fee, and its finality. Nothing invented.
+                { v: PRICE_LABEL, s: 'per task', c: 'var(--accent)' },
+                { v: '~3s', s: 'settlement finality', c: 'var(--good)' },
+                { v: '$0.0001', s: 'network fee', c: 'var(--info)' },
               ].map(st => (
                 <div key={st.s} className="card px-3 py-4 text-center">
                   <div className="font-display text-2xl font-extrabold" style={{ color: st.c }}>{st.v}</div>

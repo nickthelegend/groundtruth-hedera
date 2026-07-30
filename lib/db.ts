@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { canTransition } from './types'
 import type { Task, TaskStatus, TaskResult, ProofPayload } from './types'
 
 // Service-role client — used server-side only, never exposed to browser
@@ -66,6 +67,12 @@ export async function transition(
   to: TaskStatus,
   extra?: Partial<Pick<Task, 'result' | 'proof_payload' | 'resolved_at' | 'submitted_at'>>
 ): Promise<Task | null> {
+  // Enforce the declared state machine here, at the only place status is
+  // written. Without this check VALID_TRANSITIONS is documentation rather than
+  // a guarantee, and an illegal move (say pending → verified, paying out for a
+  // task nobody ever did) would be a single mistaken call away.
+  if (!canTransition(from, to)) return null
+
   const db = getServiceClient()
   const update: Record<string, unknown> = { status: to, ...extra }
   const { data, error } = await db
@@ -173,6 +180,49 @@ export interface WorkerRep {
   tasks_completed: number
   tasks_failed: number
   earned_usdt: string
+}
+
+export interface RecentCompletion {
+  id: string
+  intent: string
+  resolved_at: string
+  tx_id: string | null
+  explorer: string | null
+}
+
+/**
+ * Recently verified missions, for the landing page's activity feed.
+ *
+ * The feed shows real completions or nothing at all — inventing plausible
+ * activity on a marketplace page would misrepresent how much is actually
+ * happening.
+ */
+export async function listRecentCompletions(limit = 6): Promise<RecentCompletion[]> {
+  const db = getServiceClient()
+  const { data, error } = await db
+    .from('tasks')
+    .select('id,intent,resolved_at,result')
+    .eq('status', 'verified')
+    .order('resolved_at', { ascending: false })
+    .limit(limit)
+  if (error || !data) return []
+
+  return (data as { id: string; intent: string; resolved_at: string; result: TaskResult | null }[])
+    .map(t => {
+      let result: unknown = t.result
+      if (typeof result === 'string') {
+        try { result = JSON.parse(result) } catch { result = null }
+      }
+      const settle = (result as { settle?: { tx_id?: string; explorer?: string } } | null)?.settle
+      return {
+        id: t.id,
+        intent: t.intent,
+        resolved_at: t.resolved_at,
+        tx_id: settle?.tx_id ?? null,
+        explorer: settle?.explorer ?? null,
+      }
+    })
+    .filter(t => !!t.resolved_at)
 }
 
 // Top human oracles by completed tasks — surfaces reputation on the board so
