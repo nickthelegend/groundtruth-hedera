@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "hedera:keygen": "tsx scripts/hedera-keygen.ts",
+    "hedera:resolve": "tsx scripts/hedera-resolve.ts",
     "hedera:setup": "tsx scripts/hedera-setup.ts",
     "e2e": "tsx scripts/e2e-hedera-pay.ts",
     "seed": "tsx scripts/seed-demo.ts"

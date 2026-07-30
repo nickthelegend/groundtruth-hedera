@@ -96,9 +96,23 @@ pnpm install
 cp .env.example .env.local
 ```
 
-Fill in `.env.local` — at minimum `HEDERA_OPERATOR_ID`, `HEDERA_OPERATOR_KEY`, `AGENT_ACCOUNT_ID`, `AGENT_PRIVATE_KEY`, the Supabase keys, and `GROQ_API_KEY`.
+### Hedera accounts
 
-Then run the one-time Hedera setup. It associates the USDC token with your treasury and agent accounts and creates the HCS proof topic:
+If you already have funded testnet accounts (from [portal.hedera.com](https://portal.hedera.com)), put their ids and keys straight into `.env.local`.
+
+Otherwise generate them. This writes two ECDSA keypairs to `.env.local` and prints an EVM address for each — sending HBAR to an EVM address auto-creates the Hedera account:
+
+```bash
+pnpm hedera:keygen     # prints a treasury + agent address to fund
+# ...send testnet HBAR to both addresses...
+pnpm hedera:resolve    # looks up the assigned 0.0.x ids, writes them back
+```
+
+Keep the treasury and agent **separate**: the treasury pays oracles, the agent pays for tasks, and the on-chain trail should read agent → treasury → worker rather than one account paying itself.
+
+### Finish setup
+
+Fill in the remaining `.env.local` values — the Supabase keys and `GROQ_API_KEY`. Then run the one-time Hedera setup, which associates the USDC token with both accounts and creates the HCS proof topic:
 
 ```bash
 pnpm hedera:setup
