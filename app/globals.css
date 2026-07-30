@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   DESIGN TOKENS — two worlds, one switch.
+   :root            → "Bright & Human"  (warm paper, coral, leaf)
+   [data-theme=dark]→ "Alive Dark"       (near-black, cyan, neon)
+   Components read tokens only, so a single data-theme flip re-skins
+   the entire product with no per-element theme code.
+   ───────────────────────────────────────────────────────────── */
+:root,
+:root[data-theme='light'] {
+  --bg:          #FBF6EF; /* warm luminous paper (brighter than the cream cliché) */
+  --bg-elev:     #FFFFFF;
+  --bg-subtle:   #F4ECDF;
+  --text:        #241F1A;
+  --text-muted:  #6E6558;
+  --text-faint:  #A79E90;
+  --border:      #EADFCD;
+  --border-strong:#DDCFB8;
+
+  --accent:      #FF5A3C; /* coral — the signature, energetic + human */
+  --accent-ink:  #FFFFFF;
+  --accent-weak: #FFE8E2;
+  --accent-line: #FFCDBF;
+  --accent-deep: #C9391F; /* darker coral — tactile button "lip" */
+
+  --good:        #12876A; /* leaf green — verified / earth / paid */
+  --good-weak:   #DCF0E8;
+  --warn:        #C9761B; /* amber — urgent */
+  --warn-weak:   #F8E9D3;
+  --info:        #3B5BDB; /* trust / links */
+  --info-weak:   #E1E7FB;
+
+  --brand:       #FF5A3C;
+  --shadow-sm:   0 1px 2px rgba(60,42,30,0.06), 0 1px 3px rgba(60,42,30,0.05);
+  --shadow-md:   0 4px 14px rgba(60,42,30,0.08), 0 2px 6px rgba(60,42,30,0.05);
+  --shadow-lg:   0 18px 50px rgba(60,42,30,0.13), 0 6px 18px rgba(60,42,30,0.08);
+  --shadow-accent:0 12px 30px rgba(255,90,60,0.28);
+  --grid-dot:    rgba(255,90,60,0.10);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg:          #04060A;
+  --bg-elev:     #0C1420;
+  --bg-subtle:   #0A1119;
+  --text:        #EDF2F7;
+  --text-muted:  #7A9AB5;
+  --text-faint:  #3A5269;
+  --border:      #1C2A3A;
+  --border-strong:#274056;
+
+  --accent:      #0DCCFF; /* cyan — the alive-dark signal */
+  --accent-ink:  #04060A;
+  --accent-weak: rgba(13,204,255,0.10);
+  --accent-line: rgba(13,204,255,0.28);
+  --accent-deep: #0892BD; /* darker cyan — tactile button "lip" */
+
+  --good:        #00E87A;
+  --good-weak:   rgba(0,232,122,0.10);
+  --warn:        #F5A623;
+  --warn-weak:   rgba(245,166,35,0.10);
+  --info:        #A78BFA;
+  --info-weak:   rgba(167,139,250,0.12);
+
+  --brand:       #0DCCFF;
+  --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md:   0 8px 24px rgba(0,0,0,0.5);
+  --shadow-lg:   0 24px 60px rgba(0,0,0,0.6);
+  --shadow-accent:0 0 34px rgba(13,204,255,0.32);
+  --grid-dot:    rgba(13,204,255,0.10);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.4s ease, color 0.3s ease;
+}
+
+/* Font roles */
+.font-display { font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif; }
+.font-mono    { font-family: var(--font-mono), ui-monospace, monospace; }
+
+/* ── Reusable, token-driven components ───────────────────────── */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.4s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-line);
+}
+
+/* Signature "dispatch ticket" — a field-dispatch card with a monospace header,
+   a dashed tear line, and punched perforation notches on the sides. Distinctive
+   on purpose, so surfaces don't read as a uniform AI card grid. */
+.ticket {
+  position: relative;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.ticket:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--accent-line); }
+.ticket-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-faint);
+  border-bottom: 1.5px dashed var(--border-strong);
+}
+/* perforation notches sitting on the dashed tear line */
+.ticket::before, .ticket::after {
+  content: ''; position: absolute; top: 30px; width: 12px; height: 12px;
+  border-radius: 999px; background: var(--bg);
+  border: 1px solid var(--border); transform: translateY(-50%);
+}
+.ticket::before { left: -6px; }
+.ticket::after  { right: -6px; }
+.ticket-body { padding: 1.15rem 1rem 1.25rem; }
+
+/* Tactile pill buttons — a solid "lip" that compresses on press. Deliberately
+   not the flat filled-rectangle + outline pair that reads as a generic default. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-family: var(--font-display), sans-serif; font-weight: 700;
+  border-radius: 999px;
+  transition: transform 0.11s ease, box-shadow 0.11s ease, background-color 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+  will-change: transform;
+}
+.btn-primary {
+  background: var(--accent); color: var(--accent-ink);
+  box-shadow: 0 4px 0 var(--accent-deep);
+}
+.btn-primary:hover { filter: brightness(1.04); }
+.btn-primary:active { transform: translateY(4px); box-shadow: 0 0 0 var(--accent-deep); }
+
+.btn-ghost {
+  background: var(--bg-elev); color: var(--text);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: 0 4px 0 var(--border-strong);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 0 var(--accent-line); }
+.btn-ghost:active { transform: translateY(4px); box-shadow: 0 0 0 var(--border-strong); }
+
+.btn-arrow { display: inline-block; transition: transform 0.2s cubic-bezier(0.2,0.7,0.2,1); }
+.btn:hover .btn-arrow { transform: translateX(4px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary:active, .btn-ghost:active { transform: none; }
+  .btn:hover .btn-arrow { transform: none; }
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  border-radius: 999px; font-family: var(--font-mono), monospace;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+
+/* Coral hand-drawn underline stroke under the headline (signature accent) */
+.underline-stroke {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-position: 0 96%;
+  background-size: 100% 0.2em;
+  padding-bottom: 0.08em;
+  border-radius: 2px;
+}
+
+/* Focus visibility — accessibility floor */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Keyframes ───────────────────────────────────────────────── */
+@keyframes pulse-ring   { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(2.8); opacity: 0; } }
+@keyframes blink-cursor { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes travel-dot   { 0% { left: -6px; opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { left: calc(100% + 6px); opacity: 0; } }
+@keyframes fade-up      { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes status-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes shimmer      { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes spin-globe   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes float-soft   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes pin-pop      { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.75; } }
+
+.animate-pulse-ring { animation: pulse-ring 2.4s ease-out infinite; }
+.animate-blink      { animation: blink-cursor 1s step-end infinite; }
+.animate-travel     { position: absolute; top: 50%; transform: translateY(-50%); animation: travel-dot 3s linear infinite; }
+.animate-travel-2   { position: absolute; top: 50%; transform: translateY(-50%); animation: travel-dot 3s linear 1.5s infinite; }
+.animate-status     { animation: status-blink 2s ease-in-out infinite; }
+.animate-float      { animation: float-soft 6s ease-in-out infinite; }
+.animate-spin-slow  { animation: spin-globe 40s linear infinite; }
+.animate-pin        { animation: pin-pop 2.2s ease-in-out infinite; }
+
+.fade-up   { animation: fade-up 0.55s cubic-bezier(0.2,0.7,0.2,1) both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.15s; }
+.fade-up-3 { animation-delay: 0.28s; }
+.fade-up-4 { animation-delay: 0.42s; }
+.fade-up-5 { animation-delay: 0.58s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, .fade-up { animation: none !important; }
+  .fade-up { opacity: 1 !important; transform: none !important; }
+}

@@ -1,0 +1,4 @@
+max_trees = 16
+root = "./"
+
+# Worktrees placed under .treehouse/ inside this repo

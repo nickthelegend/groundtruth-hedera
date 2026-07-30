@@ -1,0 +1,22 @@
+/.treehouse
+/node_modules
+/.pnp
+.pnp.js
+/.next/
+/out/
+.env.local
+.env.*.local
+.DS_Store
+*.pem
+/coverage
+/.turbo
+.vercel
+groundtruth_tmp/
+.env
+
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
+
+# Agent skills (installed via `npx skills add`)
+/.agents/
+/.claude/
