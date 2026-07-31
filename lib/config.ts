@@ -16,10 +16,9 @@ function require_env(key: string): string {
 }
 
 export const config = {
-  supabase: {
-    url: require_env('NEXT_PUBLIC_SUPABASE_URL'),
-    anonKey: require_env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-    serviceRoleKey: require_env('SUPABASE_SERVICE_ROLE_KEY'),
+  mongo: {
+    uri: require_env('MONGODB_URI'),
+    db: process.env.MONGODB_DB ?? 'groundtruth',
   },
   hedera: {
     network: HEDERA_NETWORK,

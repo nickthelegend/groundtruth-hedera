@@ -9,15 +9,15 @@
 
 Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
-**Live on testnet** — real transactions, verifiable now:
+**Live on testnet in real USDC** — full lifecycle, verifiable now:
 
 | | |
 |---|---|
-| x402 payment settled | [`0.0.7162784@1785448933.726761986`](https://hashscan.io/testnet/transaction/0.0.7162784@1785448933.726761986) |
-| Oracle payout | [`0.0.9847867@1785448990.259653822`](https://hashscan.io/testnet/transaction/0.0.9847867@1785448990.259653822) |
+| x402 payment settled | [`0.0.7162784@1785512788.541262413`](https://hashscan.io/testnet/transaction/0.0.7162784@1785512788.541262413) |
+| Oracle payout | [`0.0.9847867@1785512804.941540023`](https://hashscan.io/testnet/transaction/0.0.9847867@1785512804.941540023) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
-Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+**172 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 ---
 
@@ -44,7 +44,7 @@ This is not an EVM app pointed at a Hedera RPC. Every on-chain surface uses a fi
 
 | Concern | How it works | Why Hedera |
 |---|---|---|
-| **Payment** | x402 `exact` scheme, `hedera:testnet`, USDC (`0.0.429274`) | Agent signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. GroundTruth holds **no key on the payment path**. |
+| **Payment** | x402 `exact` scheme, `hedera:testnet`, Circle USDC (`0.0.429274`) | Agent signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. GroundTruth holds **no key on the payment path**. |
 | **Payout** | Native HTS `TransferTransaction` to the oracle's account | No payroll contract, no allowance dance, no gas token. One transaction, final in ~3s, ~$0.001. |
 | **Proof integrity** | Proof hash + notary verdict written to an **HCS topic** | Immutable, consensus-timestamped audit trail that anyone can replay from a public Mirror Node — independent of our database. |
 | **Verification** | Public **Mirror Node** transfer-list lookup | We never take the facilitator's word that a payment settled. We re-derive it from consensus. |
@@ -94,8 +94,9 @@ A confident mismatch is rejected with no payout. When the model is *unsure*, it 
 
 - Node.js 20+, pnpm
 - A funded Hedera **testnet** account — [portal.hedera.com](https://portal.hedera.com)
-- A Supabase project
-- A Groq API key (planner + notary)
+- A MongoDB database (Atlas free tier is fine)
+- A Groq API key (planner + notary) — optional; without it the notary abstains
+  and proofs are held for the paying agent to review rather than auto-paid
 
 ### Setup
 
@@ -122,35 +123,40 @@ Keep the treasury and agent **separate**: the treasury pays oracles, the agent p
 
 ### Finish setup
 
-Fill in the remaining `.env.local` values — the Supabase keys and `GROQ_API_KEY`. Then run the one-time Hedera setup, which associates the USDC token with both accounts and creates the HCS proof topic:
+Fill in the remaining `.env.local` values — `MONGODB_URI`, `PROOF_URL_SECRET` and (optionally) `GROQ_API_KEY`. Then run the one-time Hedera setup, which associates the USDC token with both accounts and creates the HCS proof topic:
 
 ```bash
 pnpm hedera:setup
 ```
 
-Paste the printed `HEDERA_PROOF_TOPIC_ID` into `.env.local`, apply the database migrations, and start:
+Paste the printed `HEDERA_PROOF_TOPIC_ID` into `.env.local`, then start:
 
 ```bash
-pnpm supabase db push
 pnpm dev
 ```
+
+MongoDB indexes — including the unique partial index on `payments.tx_hash` that stops one settled transaction paying for two tasks — are created automatically on first connection. There is no migration step.
 
 ### Prove it works
 
 ```bash
 pnpm test         # 102 unit + integration tests, offline, ~1s
+pnpm test:db      # 27 assertions against the real MongoDB
 pnpm test:chain   # 30 assertions against live Hedera testnet, real transactions
+pnpm e2e          # 13-step full lifecycle (needs the server running)
 ```
 
-**132 passing, 0 failing.**
+**172 passing, 0 failing.**
 
 `pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push.
 
-`pnpm test:chain` spends real HBAR: it builds a 402 challenge, signs a Hedera transfer, settles it through the facilitator, confirms it on a public Mirror Node, pays an oracle, and anchors a proof to HCS. Negative cases included — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
+`pnpm test:db` proves the guarantees the offline fake assumes: ten concurrent claims on one task, exactly one wins; a settled transaction refuses to pay twice even under a fresh payment reference; illegal state transitions are rejected; proof bytes round-trip through GridFS; and a forged, reused or expired proof-URL signature is refused.
+
+`pnpm test:chain` spends real USDC: it builds a 402 challenge, signs a Hedera transfer, settles it through the facilitator, confirms it on a public Mirror Node, pays an oracle, and anchors a proof to HCS. Negative cases included — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
 
 Real transaction links, full output, and the four bugs these tests caught are in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
-For the complete task lifecycle end to end (needs the server running, plus Supabase and Groq):
+For the complete task lifecycle end to end (needs the server running):
 
 ```bash
 pnpm e2e
@@ -243,11 +249,16 @@ The agent autonomously fetches the 402 challenge, signs a Hedera USDC transfer, 
 │   ├── hcs.ts                Proof anchoring to Hedera Consensus Service
 │   ├── settle.ts             Native HTS payout + anchor
 │   ├── notary.ts             Semantic proof-vs-intent verification
-│   └── db.ts                 Supabase queries
+│   └── notary.ts             Semantic proof-vs-intent verification
 ├── scripts/
-│   ├── hedera-setup.ts       One-time association + HCS topic creation
-│   └── e2e-hedera-pay.ts     Full paid round-trip on testnet
-└── supabase/migrations/
+│   ├── hedera-keygen.ts      Generate fundable treasury + agent keypairs
+│   ├── hedera-resolve.ts     Resolve auto-created account ids after funding
+│   ├── hedera-setup.ts       Token association + HCS topic creation
+│   ├── test-x402.ts          Live payment-rail suite
+│   ├── test-settlement.ts    Live payout + anchoring suite
+│   ├── test-mongo.ts         Live database suite
+│   └── e2e-hedera-pay.ts     Full lifecycle on testnet
+└── test/                     Offline unit + integration suites
 ```
 
 ---
@@ -276,6 +287,7 @@ This is a fork of [unspecifiedcoder/groundtruth](https://github.com/unspecifiedc
 | `GroundTruthPayroll.sol` + `transferFrom` + allowance cache | Native HTS `TransferTransaction` |
 | Proof hashes in contract storage | HCS topic messages |
 | MockUSDT with an on-chain `drip()` faucet | Treasury drip of real USDC, rate-limited |
+| Supabase (Postgres + Storage) | MongoDB (documents + GridFS proof images) |
 | OKLink explorer, chainId 196/1952 | HashScan, `hedera:testnet` |
 | EVM `0x…` worker addresses | Hedera `0.0.x` account ids |
 

@@ -26,11 +26,12 @@
        │                             │
        ▼                             ▼
 ┌──────────────┐   ┌──────────────────────────────────────────┐
-│  Supabase    │   │              Hedera                      │
+│   MongoDB    │   │              Hedera                      │
 │  tasks       │   │  x402 facilitator  → co-signs, submits   │
 │  payments    │   │  HTS               → USDC transfers      │
 │  workers     │   │  HCS               → proof anchors       │
 │  proof_hashes│   │  Mirror Node       → public verification │
+│  GridFS      │   │                                          │
 └──────────────┘   └──────────────────────────────────────────┘
 ```
 
@@ -47,6 +48,8 @@
 | Independent verification | `lib/mirror-verify.ts` | Re-derives a payment from a public Mirror Node's transfer list. |
 | Proof anchoring | `lib/hcs.ts` | Writes proof hash + verdict to an HCS topic; reads them back from Mirror Node. |
 | Settlement | `lib/settle.ts` | Native HTS payout to the oracle, then anchor. |
+| Persistence | `lib/db.ts`, `lib/mongo.ts` | MongoDB. The atomic claim and the payment replay guard are database constraints, not application checks — an application-level check would race. |
+| Proof images | `lib/storage.ts` | GridFS, served through `/api/proofs/[key]` behind a short-lived HMAC signature. |
 | Proof verification | `lib/verify.ts`, `lib/notary.ts` | Integrity gate, then the semantic notary. |
 
 ---
@@ -98,7 +101,7 @@ Payout idempotency is guarded by the recorded settle block on the task — there
 ## Notable constraints Hedera introduces
 
 - **Token association.** An account cannot send *or* receive an HTS token until it associates it. Both the agent and the oracle need this. `pnpm hedera:setup` handles our own accounts; workers are told explicitly rather than failing with an opaque `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`.
-- **Two key flavours.** Portal accounts default to ECDSA but ED25519 is common. `parsePrivateKey` tries the `HEDERA_KEY_TYPE` hint, then falls back rather than rejecting a valid key.
+- **Two key flavours.** Portal accounts default to ECDSA but ED25519 is common. `parsePrivateKey` reads the curve from the DER algorithm identifier — it must NOT try one parser and fall back on throw, because `fromStringECDSA` accepts an ED25519 key without complaining and derives the wrong public key, and therefore the wrong account.
 - **Mirror lag.** Mirror Nodes trail consensus by a beat, so confirmation polls briefly instead of failing a just-settled payment.
 - **No minting.** We cannot mint Circle's USDC, so the faucet drips from the treasury's own balance — which makes its rate limits load-bearing rather than cosmetic.
 
@@ -108,3 +111,4 @@ Payout idempotency is guarded by the recorded settle block on the task — there
 
 - **No payroll smart contract.** Settlement is a native HTS transfer. A Solidity contract on the critical path would be dead weight next to Hedera's own token service.
 - **No custody.** GroundTruth never holds an agent's funds and holds no key on the payment path. The facilitator submits; we only observe.
+- **No public proof bucket.** Proofs can show storefronts, addresses and people, so they are never served from a guessable public URL. GridFS has no URL concept, so `/api/proofs/[key]` is the signed-URL equivalent: key, expiry and HMAC, verified with a constant-time compare.

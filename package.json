@@ -15,12 +15,11 @@
     "test:chain": "tsx scripts/test-x402.ts && tsx scripts/test-settlement.ts",
     "test:x402": "tsx scripts/test-x402.ts",
     "test:settlement": "tsx scripts/test-settlement.ts",
-    "e2e": "tsx scripts/e2e-hedera-pay.ts",
-    "seed": "tsx scripts/seed-demo.ts"
+    "test:db": "tsx scripts/test-mongo.ts",
+    "e2e": "tsx scripts/e2e-hedera-pay.ts"
   },
   "dependencies": {
     "@hiero-ledger/sdk": "2.80.0",
-    "@supabase/supabase-js": "^2.110.6",
     "@types/node": "^20.19.43",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
@@ -31,6 +30,7 @@
     "exifr": "^7.1.3",
     "groq-sdk": "^0.9.1",
     "mcp-handler": "^1.1.0",
+    "mongodb": "^7.5.0",
     "next": "14.2.5",
     "postcss": "^8.5.19",
     "react": "^18.3.1",
