@@ -16,6 +16,7 @@
     "test:x402": "tsx scripts/test-x402.ts",
     "test:settlement": "tsx scripts/test-settlement.ts",
     "test:db": "tsx scripts/test-mongo.ts",
+    "test:endpoints": "tsx scripts/test-endpoints.ts",
     "e2e": "tsx scripts/e2e-hedera-pay.ts"
   },
   "dependencies": {

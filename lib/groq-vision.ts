@@ -10,13 +10,14 @@ import type { VisionResult } from './types'
 // Groq (Llama-4), OpenAI (gpt-4o-mini), OpenRouter, Gemini's OpenAI shim, etc.
 //
 // RESILIENCE (no code change — all via env):
-//  - VISION_API_KEY may be a COMMA-SEPARATED list of keys for the same endpoint;
-//    on a 429/rate-limit we rotate to the next key.
+//  - a 429 or 5xx is retried with backoff (honouring Retry-After), then rotated
+//    to the next key/provider.
+//  - VISION_API_KEY may be a COMMA-SEPARATED list of keys for the same endpoint.
 //  - VISION_FALLBACK is an optional JSON array of extra providers
 //    [{"url","key","model"}] tried in order if the primary provider fails.
 // So a rate-limited or down vendor rotates/falls back automatically.
 const DEFAULT_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const DEFAULT_MODEL = process.env.VISION_MODEL ?? process.env.GROQ_VISION_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
+const DEFAULT_MODEL = process.env.VISION_MODEL ?? process.env.GROQ_VISION_MODEL ?? 'qwen/qwen3.6-27b'
 const MAX_TOKENS = Number(process.env.VISION_MAX_TOKENS ?? '1200')
 
 interface VisionProvider { url: string; key: string; model: string }
@@ -64,43 +65,68 @@ export async function verifyImageMatchesIntent(dataUrl: string, intent: string, 
 
   let lastReason = 'vision unavailable'
   // Try each provider/key in order; rotate on rate-limit / server / network error.
+  //
+  // With several keys configured a 429 rotates immediately. With only one — the
+  // common case on a free tier — there is nothing to rotate to, so retry that
+  // provider a couple of times with backoff before giving up. Without this a
+  // single rate-limited second sends an otherwise-verifiable proof to manual
+  // review, which is safe but needlessly slow.
+  const attempts = Number(process.env.VISION_RETRY_ATTEMPTS ?? '3')
+  const baseDelayMs = Number(process.env.VISION_RETRY_DELAY_MS ?? '2000')
+
   for (const p of providers) {
-    try {
-      const res = await fetch(p.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` },
-        body: JSON.stringify({
-          model: p.model,
-          messages: [{ role: 'user', content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ] }],
-          temperature: 0,
-          max_tokens: MAX_TOKENS,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      })
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const res = await fetch(p.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` },
+          body: JSON.stringify({
+            model: p.model,
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ] }],
+            temperature: 0,
+            max_tokens: MAX_TOKENS,
+          }),
+          signal: AbortSignal.timeout(20_000),
+        })
 
-      if (!res.ok) {
-        lastReason = `vision unavailable (HTTP ${res.status})`
-        if (res.status === 429 || res.status >= 500) continue // rotate to next key/provider
-        return skipped(lastReason) // 4xx (bad key/request) — rotating won't help
-      }
-      const json = await res.json()
-      const content = json.choices?.[0]?.message?.content
-      if (!content) { lastReason = 'vision returned no content'; continue }
+        if (!res.ok) {
+          lastReason = `vision unavailable (HTTP ${res.status})`
+          if (res.status === 429 || res.status >= 500) {
+            // Honour Retry-After when the provider sends one; otherwise back off
+            // exponentially. Skip the wait on the final attempt.
+            if (attempt < attempts - 1) {
+              const retryAfter = Number(res.headers.get('retry-after'))
+              const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+                ? Math.min(retryAfter * 1000, 15_000)
+                : baseDelayMs * 2 ** attempt
+              await new Promise(r => setTimeout(r, waitMs))
+            }
+            continue // retry this provider, then rotate to the next
+          }
+          return skipped(lastReason) // 4xx (bad key/request) — retrying won't help
+        }
+        const json = await res.json()
+        const content = json.choices?.[0]?.message?.content
+        if (!content) { lastReason = 'vision returned no content'; continue }
 
-      const parsed = extractJson(content)
-      return {
-        checked: true,
-        match: !!parsed.match,
-        confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
-        reason: String(parsed.reason ?? '').slice(0, 200),
-        challengeFound: challenge ? !!parsed.challenge_visible : undefined,
+        const parsed = extractJson(content)
+        return {
+          checked: true,
+          match: !!parsed.match,
+          confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
+          reason: String(parsed.reason ?? '').slice(0, 200),
+          challengeFound: challenge ? !!parsed.challenge_visible : undefined,
+        }
+      } catch {
+        lastReason = 'vision error (network/timeout)'
+        if (attempt < attempts - 1) {
+          await new Promise(r => setTimeout(r, baseDelayMs * 2 ** attempt))
+        }
+        continue // retry, then fall through to the next provider
       }
-    } catch {
-      lastReason = 'vision error (network/timeout)'
-      continue // try next provider
     }
   }
   return skipped(lastReason)

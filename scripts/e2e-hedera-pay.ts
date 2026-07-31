@@ -53,11 +53,27 @@ function die(msg: string): never {
   process.exit(1)
 }
 
-/** A real 1x1 PNG so the format sniffer and image pipeline have actual bytes. */
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-  'base64'
-)
+/**
+ * Render a stand-in "photo" of an open coffee shop with the task's freshness
+ * code visible, the way a real worker would hold up a note.
+ *
+ * Generated rather than checked in so the vision model is genuinely reading the
+ * per-task code, not a fixture that happens to match.
+ */
+async function renderProofImage(challenge: string): Promise<Buffer> {
+  const sharp = (await import('sharp')).default
+  const svg = `<svg width="640" height="440" xmlns="http://www.w3.org/2000/svg">
+    <rect width="640" height="440" fill="#f2ede4"/>
+    <rect x="60" y="60" width="520" height="290" fill="#3a3027"/>
+    <rect x="150" y="150" width="150" height="200" fill="#8fd6ff"/>
+    <rect x="340" y="150" width="150" height="200" fill="#8fd6ff"/>
+    <text x="320" y="120" font-family="Helvetica" font-size="40" fill="#ffffff" text-anchor="middle">COFFEE SHOP</text>
+    <text x="320" y="300" font-family="Helvetica" font-size="34" fill="#0b8f3a" text-anchor="middle">OPEN</text>
+    <rect x="180" y="365" width="280" height="55" rx="6" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+    <text x="320" y="403" font-family="Helvetica" font-size="30" fill="#111111" text-anchor="middle">${challenge}</text>
+  </svg>`
+  return sharp(Buffer.from(svg)).png().toBuffer()
+}
 
 async function main() {
   const { agentPay } = await import('../lib/agent-pay')
@@ -137,6 +153,10 @@ async function main() {
 
   // ── 6. Submit proof ────────────────────────────────────────────────────────
   step(5, 'Oracle submits photo proof')
+  const challenge: string = created.proof_spec?.challenge ?? ''
+  info(`freshness code for this task: ${challenge}`)
+  const PNG = await renderProofImage(challenge)
+
   const fd = new FormData()
   fd.append('task_id', taskId)
   fd.append('worker_wallet', ORACLE)

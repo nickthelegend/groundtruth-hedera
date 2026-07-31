@@ -17,7 +17,7 @@ Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 | Oracle payout | [`0.0.9847867@1785512804.941540023`](https://hashscan.io/testnet/transaction/0.0.9847867@1785512804.941540023) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
-**172 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+**230 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 ---
 
@@ -86,6 +86,10 @@ Payment being real is only half the problem. Proof has to mean *verified content
 
 A confident mismatch is rejected with no payout. When the model is *unsure*, it errs toward paying the worker — GroundTruth never denies an honest oracle over an AI hiccup. The verdict (decision · confidence · reason) is stored on the task, shown to the oracle, returned to the calling agent, and **anchored to HCS**.
 
+With a vision key configured this runs fully autonomously: `pnpm e2e` submits a generated photo carrying that task's freshness code, the model reads the code back, and the payout fires with no human in the loop. Without a key the notary abstains and the task is held — safe, just not autonomous.
+
+The freshness gate for *form* proofs is a deterministic string match performed **before** any model call, so a missing code is a hard reject even when every AI provider is down.
+
 ---
 
 ## Quick start
@@ -140,13 +144,14 @@ MongoDB indexes — including the unique partial index on `payments.tx_hash` tha
 ### Prove it works
 
 ```bash
-pnpm test         # 102 unit + integration tests, offline, ~1s
-pnpm test:db      # 27 assertions against the real MongoDB
-pnpm test:chain   # 30 assertions against live Hedera testnet, real transactions
-pnpm e2e          # 13-step full lifecycle (needs the server running)
+pnpm test             # 120 unit + integration, offline, ~1s
+pnpm test:db          # 27 against the real MongoDB
+pnpm test:chain       # 30 against live Hedera testnet, real USDC
+pnpm test:endpoints   # 40 HTTP routes, happy + rejection paths
+pnpm e2e              # 13-step full lifecycle
 ```
 
-**172 passing, 0 failing.**
+**230 passing, 0 failing.** The last two need `pnpm dev` running.
 
 `pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push.
 

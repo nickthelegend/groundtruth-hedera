@@ -16,13 +16,14 @@ Every claim below is backed by a transaction anyone can open on HashScan.
 ## Reproduce it
 
 ```bash
-pnpm test         # 102 unit + integration, offline, ~1s
-pnpm test:db      # 27 against the real MongoDB
-pnpm test:chain   # 30 against live Hedera testnet, real USDC
-pnpm e2e          # 13-step full lifecycle (server must be running)
+pnpm test             # 120 unit + integration, offline, ~1s
+pnpm test:db          # 27 against the real MongoDB
+pnpm test:chain       # 30 against live Hedera testnet, real USDC
+pnpm test:endpoints   # 40 HTTP routes, happy + rejection paths
+pnpm e2e              # 13-step full lifecycle
 ```
 
-**172 passing, 0 failing.**
+**230 passing, 0 failing.**
 
 | Suite | Tests | Needs network? |
 |---|---|---|
@@ -33,9 +34,11 @@ pnpm e2e          # 13-step full lifecycle (server must be running)
 | `test/x402.test.ts` | 12 | no |
 | `test/api-human-do.test.ts` | 16 | no |
 | `test/api-lifecycle.test.ts` | 15 | no |
+| `test/notary.test.ts` | 18 | no |
 | `scripts/test-x402.ts` | 15 | **live testnet** |
 | `scripts/test-settlement.ts` | 15 | **live testnet** |
 | `scripts/test-mongo.ts` | 27 | **live MongoDB** |
+| `scripts/test-endpoints.ts` | 40 | **live testnet + MongoDB + server** |
 | `scripts/e2e-hedera-pay.ts` | 13 | **live testnet + MongoDB + server** |
 
 The offline suites run in CI on every push. The chain and database suites hit live infrastructure and spend real USDC, so they are run deliberately and never in CI.
@@ -231,3 +234,73 @@ Step 5 is worth reading closely. With no vision key configured the notary **abst
 ```
 
 The two that matter most: **ten concurrent claims on one task, exactly one wins**, and **a settled transaction refuses to pay twice even under a freshly invented payment reference**. Both are enforced by database constraints — a conditional `findOneAndUpdate` and a unique partial index — not by application-level checks, which would race.
+
+
+---
+
+## Endpoints — 40/40
+
+`pnpm test:endpoints` walks every HTTP route, both the happy path and the rejection path, spending one real payment.
+
+```
+Public endpoints
+  ✓ GET  /api/v1/human-do (unpaid discovery) → 402
+  ✓ 402 challenge carries the facilitator fee payer
+  ✓ GET  /api/pulse · /api/recent · /api/tasks · /api/faucet → 200
+  ✓ GET  /api/v1/tasks/<unknown> → 404
+Authorisation
+  ✓ GET  /api/admin/queue  no secret → 401 · wrong secret → 401 · valid → 200
+Payment gate
+  ✓ POST /api/v1/human-do  no payment → 402 · garbage header → 402
+  ✓ POST /api/v1/human-do (valid payment) → 201
+  ✓ POST /api/v1/human-do (replayed payment) → 402
+Claim
+  ✓ EVM address → 400 · valid → 200 · already claimed → 409
+Submit proof
+  ✓ not your task → 403
+  ✓ proof without the freshness code is rejected
+  ✓ no payout on a rejected proof
+  ✓ valid retry → notary: accept
+Review and payout
+  ✓ notary auto-accepted and settled inline
+  ✓ oracle paid — 0.44 USDC
+  ✓ proof anchored at HCS #5
+Proof access control
+  ✓ GET /api/proofs/<key> no signature → 403 · forged signature → 403
+MCP transport
+  ✓ POST /api/mcp (tools/list) → 200, advertises human_do
+```
+
+Two results are worth reading twice:
+
+- **A proof missing the freshness code is rejected and produces no settlement.** For form proofs this gate is a plain string comparison run *before* any model call, so it holds even with every AI provider down.
+- **The replayed payment is refused.** Same signed header, second request — 402, no second task.
+
+---
+
+## Autonomous notary
+
+With a vision model configured the loop closes without a human. `pnpm e2e` generates a proof image carrying that task's freshness code, and the model reads it back:
+
+```
+[5] Oracle submits photo proof
+      freshness code for this task: NA3UFQ
+  ✓ submitted — status verified
+      notary: accept (The image is a graphic representation of a coffee shop
+      entrance with an 'OPEN' sign, and the required code 'NA3UFQ' is clearly
+      visible in a box below.)
+[6] Notary auto-accepted — no manual review needed
+[7] ✓ payout tx 0.0.9847867@1785513659.133857130
+    ✓ paid 0.44 USDC
+    ✓ proof anchored at HCS sequence #7
+```
+
+The code is generated per task, so the model is genuinely reading it rather than matching a fixture.
+
+Negative cases were checked directly against the live model: a blank wall returns `match:false, confidence:1` — *"The image is completely blank and does not show a coffee shop entrance."*
+
+### A fifth bug, found while wiring this up
+
+**A 429 sent verifiable proofs to manual review.** The vision client rotated to the next provider on rate-limit, which does nothing when only one key is configured — the common case on a free tier. One rate-limited second was enough to make an otherwise-verifiable photo require human review. It now retries with backoff, honouring `Retry-After`, before rotating. The first e2e run showed the old behaviour (`vision unavailable (HTTP 429)` → held for review); the run after the fix auto-accepted.
+
+Note the failure was *safe* in both cases — an unverifiable proof is held, never auto-paid. It was slow, not wrong.
