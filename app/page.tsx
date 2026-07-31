@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { LogoMark } from './logo'
 import LiveNetwork from './live-network'
 
+import { TASK_PRICE, PAYMENT_ASSET_SYMBOL, FEE_PERCENT, NETWORK_LABEL, HEDERA_NETWORK } from '@/lib/public-config'
+
 // Price comes from the same env the 402 challenge is built from, so the number
 // on the landing page cannot drift from the number an agent is actually charged.
-const PRICE_LABEL = `${process.env.ASP_PRICE_USDT ?? '2.00'} ${
-  (process.env.PAYMENT_ASSET_ID ?? '') === '0.0.0' ? 'HBAR' : 'USDC'
-}`
+const PRICE_LABEL = `${TASK_PRICE} ${PAYMENT_ASSET_SYMBOL}`
 
 const FLOW = [
   { label: 'AI asks', desc: 'An agent calls human_do via MCP', emoji: '🤖', c: 'var(--info)' },
@@ -39,7 +39,7 @@ export default function Home() {
             <div className="fade-up fade-up-1 chip inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
                  style={{ background: 'var(--accent-weak)', color: 'var(--accent)' }}>
               <span className="w-1.5 h-1.5 rounded-full animate-status" style={{ background: 'var(--accent)' }} />
-              <span className="text-[10px]">Live on Hedera testnet · x402</span>
+              <span className="text-[10px]">Live on {NETWORK_LABEL} · x402</span>
             </div>
 
             <h1 className="fade-up fade-up-2 font-display font-extrabold tracking-tight leading-[1.02] text-[2.75rem] sm:text-6xl mb-5"
@@ -67,11 +67,13 @@ export default function Home() {
             {/* stat chips */}
             <div className="fade-up fade-up-5 grid grid-cols-3 gap-3 max-w-md mx-auto lg:mx-0">
               {[
-                // Every figure here is real: the configured price, Hedera's
-                // published transfer fee, and its finality. Nothing invented.
+                // The configured price, plus Hedera's published figures for
+                // consensus finality and the HTS token-transfer fee. Keep the
+                // fee in step with README.md and lib/settle.ts — a landing page
+                // that is 10x off the docs is worse than no figure at all.
                 { v: PRICE_LABEL, s: 'per task', c: 'var(--accent)' },
-                { v: '~3s', s: 'settlement finality', c: 'var(--good)' },
-                { v: '$0.0001', s: 'network fee', c: 'var(--info)' },
+                { v: '~3s', s: 'consensus finality', c: 'var(--good)' },
+                { v: '~$0.001', s: 'HTS transfer fee', c: 'var(--info)' },
               ].map(st => (
                 <div key={st.s} className="card px-3 py-4 text-center">
                   <div className="font-display text-2xl font-extrabold" style={{ color: st.c }}>{st.v}</div>
@@ -125,8 +127,11 @@ export default function Home() {
             </h2>
             <p className="mb-5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               You don&apos;t post tasks by hand — your agent does. GroundTruth speaks x402 over
-              MCP: any MCP-compatible agent discovers it, pays in USDC on Hedera, and a human
-              gets to work. No custom integration required.
+              MCP: any MCP-compatible agent discovers it and a human gets to work. The demo
+              deployment signs the USDC payment with its own configured agent wallet, so an
+              agent with no Hedera key can call it — or bring your own by posting to
+              <code className="font-mono text-[13px]"> /api/v1/human-do</code> with an
+              <code className="font-mono text-[13px]"> X-PAYMENT</code> header.
             </p>
             <div className="card font-mono text-xs mb-6 px-4 py-3 flex items-center gap-2 overflow-x-auto">
               <span style={{ color: 'var(--good)' }}>$</span>
@@ -182,7 +187,7 @@ export default function Home() {
               Do a small task. Get paid on the spot.
             </h2>
             <p className="max-w-xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-              No experience needed. Every mission pays instantly to your Hedera account in USDC.
+              No experience needed. Verified missions pay out on-chain in seconds, straight to your Hedera account, minus a {FEE_PERCENT} platform fee.
             </p>
           </div>
 
@@ -218,7 +223,7 @@ export default function Home() {
           <div className="flex items-center gap-4 font-mono">
             <span>x402 exact scheme</span>
             <span>·</span>
-            <span>hedera:testnet</span>
+            <span>{HEDERA_NETWORK}</span>
             <span>·</span>
             <a href="/api/mcp" className="transition-colors hover:opacity-80" style={{ color: 'var(--text-muted)' }}>MCP Endpoint</a>
           </div>

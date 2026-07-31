@@ -13,11 +13,16 @@ Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
 | | |
 |---|---|
-| x402 payment settled | [`0.0.7162784@1785516643.872521764`](https://hashscan.io/testnet/transaction/0.0.7162784@1785516643.872521764) |
-| Oracle payout | [`0.0.9847867@1785516706.062362736`](https://hashscan.io/testnet/transaction/0.0.9847867@1785516706.062362736) |
+| x402 payment settled | [`0.0.7162784@1785523629.505413662`](https://hashscan.io/testnet/transaction/0.0.7162784@1785523629.505413662) |
+| Oracle payout | [`0.0.9847867@1785523695.053277836`](https://hashscan.io/testnet/transaction/0.0.9847867@1785523695.053277836) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
-**239 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+Three distinct accounts — agent [`0.0.9847870`](https://hashscan.io/testnet/account/0.0.9847870)
+→ treasury [`0.0.9847867`](https://hashscan.io/testnet/account/0.0.9847867)
+→ oracle [`0.0.9860142`](https://hashscan.io/testnet/account/0.0.9860142) — so the on-chain trail
+is a real two-sided market, not one wallet paying itself.
+
+**241 assertions passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 ---
 
@@ -45,16 +50,16 @@ This is not an EVM app pointed at a Hedera RPC. Every on-chain surface uses a fi
 | Concern | How it works | Why Hedera |
 |---|---|---|
 | **Payment** | x402 `exact` scheme, `hedera:testnet`, Circle USDC (`0.0.429274`) | The payer signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. As the resource server GroundTruth holds **no key** — it only ever sees a signed transaction. |
-| **Payout** | Native HTS `TransferTransaction` to the oracle's account | No payroll contract, no allowance dance, no gas token. One transaction, final in ~3s, ~$0.001. |
-| **Proof integrity** | Proof hash + notary verdict written to an **HCS topic** | Immutable, consensus-timestamped audit trail that anyone can replay from a public Mirror Node — independent of our database. |
-| **Verification** | Public **Mirror Node** transfer-list lookup | We never take the facilitator's word that a payment settled. We re-derive it from consensus. |
+| **Payout** | Native HTS `TransferTransaction` to the oracle's account | No payroll contract, no allowance dance, no approve-then-`transferFrom` round trip. One transaction, final in seconds, for [Hedera's published](https://hedera.com/fees) ~$0.001 HTS transfer fee — paid by the treasury. |
+| **Proof integrity** | Proof hash + intent hash + verdict written to an **HCS topic** on every payout | Immutable, consensus-timestamped record anyone can replay from a public Mirror Node, independent of our database. Anchoring is best-effort and happens after payout, so a topic outage never costs a worker money — and rejected proofs are not anchored. |
+| **Verification** | Public **Mirror Node** transfer-list lookup | We never take the facilitator's word that a payment settled — we re-read the transaction's transfer list from a public Mirror Node, a source independent of the facilitator, before believing it. |
 
 ### Why x402 on Hedera changes the shape of the code
 
 The X Layer version of this project used the EVM `exact` scheme over Permit2: the agent signed an authorization and *we* pulled the funds with our own operator key. On Hedera the flow inverts, and it's strictly better:
 
 - The payer **signs a real transaction**, not an approval to be redeemed later.
-- The **facilitator is the fee payer**, so a paying agent needs USDC but needs *no HBAR for the payment itself*. (It still needs a little HBAR to associate the token once.)
+- The **facilitator is the fee payer for the transfer**, so the agent spends no HBAR on the payment itself. It still needs a little HBAR once, to associate the token.
 - The **resource server holds no key** — it cannot redirect, inflate or replay a payment, because `payTo` and `amount` are inside the payer's signature and the payment reference is bound to the Hedera transaction id.
 - Settlement returns a genuine Hedera transaction id, linkable on HashScan.
 
@@ -88,7 +93,7 @@ Payment being real is only half the problem. Proof has to mean *verified content
 2. **Semantic notary** ([`lib/notary.ts`](lib/notary.ts)) — an AI judges whether the proof satisfies the task *intent*. Photos go to a vision model; forms go to an LLM.
 3. **Freshness challenge** — each task carries a per-task code the worker must include, so a stock or recycled image cannot pass.
 
-A confident mismatch is rejected with no payout. When the model is *unsure*, it errs toward paying the worker — GroundTruth never denies an honest oracle over an AI hiccup. The verdict (decision · confidence · reason) is stored on the task, shown to the oracle, returned to the calling agent, and **anchored to HCS**.
+A confident mismatch is rejected with no payout. When the model **runs but is unsure**, the proof still pays — an honest oracle is not failed over a borderline score. When the model **cannot run at all** (no key, rate limit, timeout), nothing is auto-paid: the task is held for the paying agent to accept or reject. Those two states behave oppositely on purpose — the first is a judgement, the second is an absence of one. The verdict (decision · confidence · reason) is stored on the task, shown to the oracle, and returned to the calling agent. Paid tasks are additionally **anchored to HCS**.
 
 With a vision key configured this runs fully autonomously: `pnpm e2e` submits a generated photo carrying that task's freshness code, the model reads the code back, and the payout fires with no human in the loop. Without a key the notary abstains and the task is held — safe, just not autonomous.
 
@@ -148,19 +153,19 @@ MongoDB indexes — including the unique partial index on `payments.tx_hash` tha
 ### Prove it works
 
 ```bash
-pnpm test             # 128 unit + integration, offline, ~1s
-pnpm test:db          # 27 against the real MongoDB
-pnpm test:chain       # 30 against live Hedera testnet, real USDC
-pnpm test:endpoints   # 41 HTTP routes, happy + rejection paths
-pnpm e2e              # 13-step full lifecycle
+pnpm test             # 130 unit + integration assertions, offline, ~1s
+pnpm test:db          # 27 assertions against the real MongoDB
+pnpm test:chain       # 30 assertions against live Hedera testnet, real USDC
+pnpm test:endpoints   # 41 assertions across 12 HTTP routes — spends one real payment
+pnpm e2e              # full lifecycle on testnet: 8 steps, 13 assertions
 ```
 
-**239 passing, 0 failing.** The last two need `pnpm dev` running.
+**241 passing, 0 failing.** The last two need `pnpm dev` running.
 
 [`docs/VERIFICATION.md`](docs/VERIFICATION.md) contains the **verbatim stdout** of every one of
 those commands, captured in a single sitting, plus the seven silent bugs the tests caught.
 
-`pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push.
+`pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push to `main` and every pull request.
 
 `pnpm test:db` proves the guarantees the offline fake assumes: ten concurrent claims on one task, exactly one wins; a settled transaction refuses to pay twice even under a fresh payment reference; illegal state transitions are rejected; proof bytes round-trip through GridFS; and a forged, reused or expired proof-URL signature is refused.
 
@@ -174,7 +179,7 @@ For the complete task lifecycle end to end (needs the server running):
 pnpm e2e
 ```
 
-> **Funding note.** The agent account needs testnet **USDC** (`0.0.429274`), not just HBAR, and must be associated with the token (`pnpm hedera:setup` does the association). If you'd rather demo without sourcing testnet USDC, set `PAYMENT_ASSET_ID=0.0.0` and the entire flow — payment, payout, faucet — runs in native HBAR instead, which the Portal faucet funds directly.
+> **Funding note.** The agent account needs testnet **USDC** (`0.0.429274`), not just HBAR, and must be associated with the token (`pnpm hedera:setup` does the association). If you'd rather demo without sourcing testnet USDC, set `PAYMENT_ASSET_ID=0.0.0` and payout, faucet and mirror verification all switch to native HBAR, which the Portal faucet funds directly. The payment leg additionally requires your facilitator to advertise the `exact` scheme for asset `0.0.0` — blocky402 does.
 
 ---
 
@@ -203,7 +208,7 @@ GroundTruth's bundled agent wallet fetches the 402 challenge, signs a Hedera USD
 | `ground_truth_info` | Service info, pricing, network, facilitator, proof-anchor topic |
 | `human_do` | Create a task (requires x402 payment). Returns `task_id` and the Hedera tx id |
 | `task_status` | Poll status, retrieve the verified proof and notary verdict |
-| `review_task` | Accept (releases the HTS payout) or reject a submitted proof |
+| `review_task` | Accept (releases the HTS payout) or reject a submitted proof. Authenticates with `ADMIN_SECRET` or the task's `payment_ref` |
 
 ---
 
@@ -211,16 +216,16 @@ GroundTruth's bundled agent wallet fetches the 402 challenge, signs a Hedera USD
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/api/mcp` | GET/POST | MCP server |
+| `/api/mcp` | POST | MCP server (streamable HTTP) |
 | `/api/v1/human-do` | GET | Returns the 402 challenge — discover the price without paying |
-| `/api/v1/human-do` | POST | Create a task (x402 payment required) |
+| `/api/v1/human-do` | POST | Create a task (x402 payment required; a non-production demo bypass exists behind `ALLOW_DEMO_BYPASS`) |
 | `/api/v1/tasks/:id` | GET | Task status, proof, notary verdict, settlement |
 | `/api/faucet` | GET/POST | Testnet USDC drip + association status |
 | `/api/pulse` | GET | Network stats |
 
 ### The 402 challenge
 
-`GET /api/v1/human-do` returns exactly what a payer needs, including the facilitator's fee payer:
+`GET /api/v1/human-do` returns the payment requirements, including the facilitator's fee payer (abridged — the real body also carries `resource.description` / `mimeType` / `tags`):
 
 ```json
 {
@@ -261,7 +266,8 @@ GroundTruth's bundled agent wallet fetches the 402 challenge, signs a Hedera USD
 │   ├── hcs.ts                Proof anchoring to Hedera Consensus Service
 │   ├── settle.ts             Native HTS payout + anchor
 │   ├── notary.ts             Semantic proof-vs-intent verification
-│   └── notary.ts             Semantic proof-vs-intent verification
+│   ├── verify.ts             Integrity gate — type, decode, fields, duplicates
+│   └── payment.ts            Three-gate payment pipeline
 ├── scripts/
 │   ├── hedera-keygen.ts      Generate fundable treasury + agent keypairs
 │   ├── hedera-resolve.ts     Resolve auto-created account ids after funding
@@ -269,6 +275,7 @@ GroundTruth's bundled agent wallet fetches the 402 challenge, signs a Hedera USD
 │   ├── test-x402.ts          Live payment-rail suite
 │   ├── test-settlement.ts    Live payout + anchoring suite
 │   ├── test-mongo.ts         Live database suite
+│   ├── test-endpoints.ts     Live HTTP route suite (needs a running server)
 │   └── e2e-hedera-pay.ts     Full lifecycle on testnet
 └── test/                     Offline unit + integration suites
 ```
@@ -284,7 +291,7 @@ Everything chain-facing is env-driven. The two switches worth knowing:
 | `PAYMENT_ASSET_ID` | `0.0.429274` (USDC) | Set to `0.0.0` to run the whole app in native HBAR — no token association needed |
 | `X402_FACILITATOR_URL` | `https://api.testnet.blocky402.com` | Any Hedera-capable facilitator. `https://x402.org/facilitator` also works |
 
-Full list in [`.env.example`](.env.example).
+Everything above and the common options are in [`.env.example`](.env.example). A few advanced knobs are read straight from the environment: `AUTO_ACCEPT` (set `false` to require manual review for every payout), `VISION_*`, `FORM_JUDGE_*`, `MIRROR_LOOKUP_*`, `PROOF_MAX_BYTES`, `HEDERA_MAX_TX_FEE_HBAR`.
 
 ---
 

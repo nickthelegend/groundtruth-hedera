@@ -1,5 +1,6 @@
 import { pulseStats } from '@/lib/db'
 import Link from 'next/link'
+import { HEDERA_NETWORK, HASHSCAN_BASE } from '@/lib/public-config'
 
 export const revalidate = 30
 
@@ -56,7 +57,7 @@ export default async function PulsePage() {
           <p className="font-mono text-xs leading-relaxed" style={{ color: 'var(--text-faint)' }}>
             All payouts settled on-chain via{' '}
             <a
-              href="https://hashscan.io/testnet"
+              href={HASHSCAN_BASE}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:underline"
@@ -64,7 +65,8 @@ export default async function PulsePage() {
             >
               HashScan
             </a>{" "}
-            · hedera:testnet · native USDC transfers via HTS · proofs anchored to HCS.
+            · {HEDERA_NETWORK} · payouts settle as native HTS transfers · verified proofs are
+            anchored to HCS on a best-effort basis.
           </p>
         </div>
 

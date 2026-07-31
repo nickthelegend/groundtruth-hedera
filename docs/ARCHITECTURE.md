@@ -9,7 +9,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                       AI Agent (MCP)                         │
-│      ground_truth_info · human_do · task_status · review     │
+│   ground_truth_info · human_do · task_status · review_task   │
 └───────────────────────────┬──────────────────────────────────┘
                             │ 1. GET  → 402 challenge
                             │ 2. sign Hedera TransferTransaction
@@ -41,7 +41,7 @@
 
 | Concern | File | Notes |
 |---|---|---|
-| Hedera primitives | `lib/hedera.ts` | Client construction, key-flavour detection, HTS transfers, token association, balances, HashScan links. Nothing else imports the SDK directly. |
+| Hedera primitives | `lib/hedera.ts` | Client construction, key-flavour detection, HTS transfers, token association, balances, HashScan links. The only module that constructs a Client or moves value; `lib/hcs.ts` imports the SDK's topic transactions but reuses this module's operator client. |
 | x402 resource server | `lib/x402.ts` | Builds the 402 challenge, verifies and settles via the facilitator. Owns `initialize()` so the facilitator's fee payer is merged into what we advertise. |
 | Agent payer | `lib/agent-pay.ts` | The client side: associate token, check balance, fetch the 402, sign a real transfer. |
 | Payment orchestration | `lib/payment.ts` | The three-gate pipeline (verify → settle → confirm). |
@@ -87,10 +87,10 @@ The payment reference is derived from the Hedera transaction id (`hedera-<txId>`
 ## Proof and payout
 
 1. **Integrity gate** (`lib/verify.ts`) — type match, image decodes, required fields, duplicate-hash check.
-2. **Semantic notary** (`lib/notary.ts`) — a vision model for photos, an LLM for forms, judging proof against *intent*. Confident mismatch → reject, no payout. Uncertain → pay the worker; we do not punish an honest oracle for an AI hiccup.
+2. **Semantic notary** (`lib/notary.ts`) — a vision model for photos, an LLM for forms, judging proof against *intent*. Confident mismatch → reject, no payout. Unsure but *checked* → pay the worker; we do not punish an honest oracle for a borderline score. Could not run at all → hold for the paying agent, so an unverifiable proof never auto-pays.
 3. **Freshness challenge** — a per-task code the worker must include, so a stock image cannot pass.
 4. **Payout** (`lib/settle.ts`) — native HTS transfer to the oracle's `0.0.x` account.
-5. **Anchor** (`lib/hcs.ts`) — proof hash, intent hash, verdict, confidence, payout, timestamp → HCS topic.
+5. **Anchor** (`lib/hcs.ts`) — proof hash, intent hash, verdict, confidence, payout, timestamp → HCS topic. Only *paid* tasks are anchored: `anchorProof` is called from `settleTask` alone, so the topic is a payout record rather than a log of every verdict.
 
 Ordering is deliberate: **pay first, anchor second**. Anchoring is best-effort and never throws; a topic outage must not cost a worker their money. The anchor result is recorded on the task either way.
 
@@ -101,7 +101,7 @@ Payout idempotency is guarded by the recorded settle block on the task — there
 ## Notable constraints Hedera introduces
 
 - **Token association.** An account cannot send *or* receive an HTS token until it associates it. Both the agent and the oracle need this. `pnpm hedera:setup` handles our own accounts; workers are told explicitly rather than failing with an opaque `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT`.
-- **Two key flavours.** Portal accounts default to ECDSA but ED25519 is common. `parsePrivateKey` reads the curve from the DER algorithm identifier — it must NOT try one parser and fall back on throw, because `fromStringECDSA` accepts an ED25519 key without complaining and derives the wrong public key, and therefore the wrong account.
+- **Two key flavours.** Portal accounts default to ECDSA but ED25519 is common. For a DER-encoded key `parsePrivateKey` reads the curve from the algorithm identifier, because `fromStringECDSA` accepts an ED25519 key without complaining and derives the wrong public key — and therefore the wrong account. A bare 32-byte hex key carries no curve information at all, so there it does fall back to trying ECDSA first (the Portal default); set `HEDERA_KEY_TYPE` when you know which you have.
 - **Mirror lag.** Mirror Nodes trail consensus by a beat, so confirmation polls briefly instead of failing a just-settled payment.
 - **No minting.** We cannot mint Circle's USDC, so the faucet drips from the treasury's own balance — which makes its rate limits load-bearing rather than cosmetic.
 

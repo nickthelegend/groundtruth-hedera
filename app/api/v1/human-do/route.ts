@@ -6,6 +6,29 @@ import { planTask } from '@/lib/planner'
 import { generateChallenge } from '@/lib/challenge'
 import { toUnits, splitBudget } from '@/lib/money'
 
+/**
+ * Remove a task created just before a payment could be recorded.
+ *
+ * Never throws — the caller is already returning an error — but a failure here
+ * leaves an unpaid task visible on the board, so it must be loud in the log.
+ */
+async function rollbackTask(taskId: string, reason: string): Promise<void> {
+  try {
+    const removed = await deleteTask(taskId)
+    if (!removed) {
+      console.error(`[human-do] ORPHAN TASK ${taskId}: rollback after ${reason} deleted nothing`)
+    }
+  } catch (e) {
+    console.error(
+      `[human-do] ORPHAN TASK ${taskId}: rollback after ${reason} threw:`,
+      e instanceof Error ? e.message : e
+    )
+  }
+}
+
+/** The floor a caller's `budget_usdt` must meet. Paying more is allowed. */
+const LIST_PRICE = process.env.ASP_PRICE_USDT ?? '2.00'
+
 // Task creation, gated by an x402 payment settled on Hedera.
 //
 // GET returns the 402 challenge so an agent can discover the price without
@@ -50,6 +73,22 @@ export async function POST(req: NextRequest) {
   }
 
   const input = parsed.data
+
+  // `budget_usdt` is caller-supplied and becomes the price the whole payment
+  // pipeline enforces — verify, settle, and the mirror gate all check against
+  // it. Without a floor a caller could ask for a task, declare a budget of
+  // 0.000001, pay that, and clear all three gates legitimately. The schema only
+  // constrains the format, so the price floor has to be applied here.
+  if (toUnits(input.budget_usdt) < toUnits(LIST_PRICE)) {
+    return NextResponse.json(
+      {
+        ...(await buildChallenge('/api/v1/human-do')),
+        error: `budget_usdt must be at least the list price of ${LIST_PRICE}`,
+      },
+      { status: 402 }
+    )
+  }
+
   // Generated early so the payment reference can be bound to this task.
   const taskId = crypto.randomUUID()
 
@@ -140,7 +179,10 @@ export async function POST(req: NextRequest) {
       })
     } catch (err) {
       // DB error recording payment — roll back the orphan task, then report.
-      await deleteTask(task.id).catch(() => {})
+      // A failed rollback would leave an unpaid task on the public board, so it
+      // is logged rather than swallowed: silence here is the one case where the
+      // "payment clears three gates before a task exists" invariant can break.
+      await rollbackTask(task.id, 'payment record failed')
       return NextResponse.json(
         {
           error: 'Failed to record payment',
@@ -152,7 +194,7 @@ export async function POST(req: NextRequest) {
     if (!recorded) {
       // Replayed payment (payment_ref or tx id already used) — remove the
       // just-created task so no unpaid orphan remains on the board.
-      await deleteTask(task.id).catch(() => {})
+      await rollbackTask(task.id, 'replayed payment')
       return NextResponse.json({ error: 'Payment already used' }, { status: 409 })
     }
   }

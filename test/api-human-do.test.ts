@@ -227,6 +227,24 @@ describe('POST /api/v1/human-do — input validation', () => {
     expect(res.status).toBe(400)
   })
 
+  it('refuses a budget below the list price', async () => {
+    // budget_usdt is caller-supplied and becomes the enforced price, so without
+    // a floor a caller could buy a task for a millionth of a cent and still
+    // clear verify, settle and mirror confirmation legitimately.
+    const res = await POST(
+      req({ ...VALID_BODY, budget_usdt: '0.000001' }, { 'X-PAYMENT': 'h' })
+    )
+    expect(res.status).toBe(402)
+    expect((await res.json()).error).toMatch(/at least the list price/)
+    expect(state.tasks.size).toBe(0)
+    expect(processPayment).not.toHaveBeenCalled()
+  })
+
+  it('allows a budget above the list price', async () => {
+    const res = await POST(req({ ...VALID_BODY, budget_usdt: '5.00' }, { 'X-PAYMENT': 'h' }))
+    expect(res.status).toBe(201)
+  })
+
   it('attaches a freshness challenge to every task', async () => {
     const res = await POST(req(VALID_BODY, { 'X-PAYMENT': 'h' }))
     const body = await res.json()

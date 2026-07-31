@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { HEDERA_NETWORK, NETWORK_LABEL } from '@/lib/public-config'
 import { Bricolage_Grotesque, JetBrains_Mono, Inter } from 'next/font/google'
 import './globals.css'
 import ThemeToggle from './theme-toggle'
@@ -57,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="flex items-center gap-2.5 group">
               <Logo size={30} />
               <span className="font-mono text-[10px] hidden sm:inline" style={{ color: 'var(--text-faint)' }}>
-                hedera:testnet
+                {HEDERA_NETWORK}
               </span>
             </Link>
 
@@ -66,8 +67,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="hidden sm:flex chip items-center gap-1.5 px-2.5 py-1 rounded-full mr-1"
                 style={{ background: 'var(--good-weak)', color: 'var(--good)' }}
               >
-                <span className="w-1.5 h-1.5 rounded-full animate-status" style={{ background: 'var(--good)' }} />
-                <span className="text-[9px]">Network live</span>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--good)' }} />
+                <span className="text-[9px]">{NETWORK_LABEL}</span>
               </div>
 
               {[

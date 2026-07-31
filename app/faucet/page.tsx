@@ -56,7 +56,7 @@ export default function FaucetPage() {
         <div className="text-center mb-10">
           <div className="chip inline-flex items-center gap-2 mb-5" style={{ color: 'var(--info)' }}>
             <span className="w-1.5 h-1.5 rounded-full animate-status" style={{ background: 'var(--info)' }} />
-            <span className="text-[10px]">Hedera testnet</span>
+            <span className="text-[10px]">{meta.network ?? 'Hedera testnet'}</span>
           </div>
           <h1 className="font-display text-4xl font-extrabold mb-3" style={{ color: 'var(--text)' }}>
             USDC Faucet

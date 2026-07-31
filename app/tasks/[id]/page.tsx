@@ -94,6 +94,7 @@ interface Task {
     settle?: {
       worker?: string
       payout?: string
+      fee?: string
       asset_symbol?: string
       tx_id?: string | null
       explorer?: string | null
@@ -389,7 +390,11 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
             <p className="text-sm mb-8" style={{ color: 'var(--text-faint)' }}>
               <span className="font-bold" style={{ color: 'var(--good)' }}>{settle.payout ?? ''} {settle.asset_symbol ?? 'USDC'}</span> paid on Hedera to{' '}
               <span className="font-mono text-xs" style={{ color: 'var(--text-muted)' }}>{addrShort}</span>{' '}
-              <span style={{ color: 'var(--text-faint)' }}>(after 12% fee)</span>
+              {settle.fee && (
+                <span style={{ color: 'var(--text-faint)' }}>
+                  (after {settle.fee} {settle.asset_symbol ?? 'USDC'} fee)
+                </span>
+              )}
               {settle.explorer && (
                 <> · <a href={settle.explorer} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--accent)' }}>HashScan ↗</a></>
               )}

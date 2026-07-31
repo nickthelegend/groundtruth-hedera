@@ -8,28 +8,32 @@ not in this document.
 
 | Role | Account |
 |---|---|
-| Treasury / `payTo` | [`0.0.9847867`](https://hashscan.io/testnet/account/0.0.9847867) |
 | Paying agent | [`0.0.9847870`](https://hashscan.io/testnet/account/0.0.9847870) |
+| Treasury / `payTo` | [`0.0.9847867`](https://hashscan.io/testnet/account/0.0.9847867) |
+| Human oracle | [`0.0.9860142`](https://hashscan.io/testnet/account/0.0.9860142) |
 | Facilitator fee payer | [`0.0.7162784`](https://hashscan.io/testnet/account/0.0.7162784) |
 | HCS proof topic | [`0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
+
+Three distinct accounts, so the on-chain trail reads agent → treasury → oracle rather than one
+wallet paying itself.
 
 ---
 
 ## Reproduce it
 
 ```bash
-pnpm test             # 128 unit + integration, offline, ~1s
-pnpm test:db          # 27 against the real MongoDB
-pnpm test:chain       # 30 against live Hedera testnet, real USDC
-pnpm test:endpoints   # 41 HTTP routes, happy + rejection paths
-pnpm e2e              # 13-step full lifecycle
+pnpm test             # 130 unit + integration assertions, offline, ~1s
+pnpm test:db          # 27 assertions against the real MongoDB
+pnpm test:chain       # 30 assertions against live Hedera testnet, real USDC
+pnpm test:endpoints   # 41 assertions across 12 HTTP routes — spends one real payment
+pnpm e2e              # full lifecycle: 8 steps, 13 assertions
 ```
 
-**239 passing, 0 failing.**
+**241 assertions passing, 0 failing.**
 
-| Suite | Tests | Needs network? |
+| Suite | Assertions | Needs network? |
 |---|---|---|
-| `test/api-human-do.test.ts` | 16 | no |
+| `test/api-human-do.test.ts` | 18 | no |
 | `test/api-lifecycle.test.ts` | 16 | no |
 | `test/hedera.test.ts` | 17 | no |
 | `test/mirror-verify.test.ts` | 11 | no |
@@ -44,7 +48,8 @@ pnpm e2e              # 13-step full lifecycle
 | `scripts/test-endpoints.ts` | 41 | **live testnet + MongoDB + server** |
 | `scripts/e2e-hedera-pay.ts` | 13 | **live testnet + MongoDB + server** |
 
-Only the offline suite runs in CI. Everything else spends real USDC, so it is run deliberately.
+Only the offline suite runs in CI — on every push to `main` and every pull request. The rest
+need funded keys, a live database and a running server, and spend real USDC.
 
 ---
 
@@ -55,20 +60,20 @@ The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troub
 
  RUN  v2.1.9 /Volumes/Extreme SSD/Projects/groundtruth
 
- ✓ test/money.test.ts (13 tests) 45ms
- ✓ test/types.test.ts (18 tests) 7ms
- ✓ test/api-human-do.test.ts (16 tests) 16ms
- ✓ test/notary.test.ts (18 tests) 141ms
- ✓ test/api-lifecycle.test.ts (16 tests) 113ms
- ✓ test/verify.test.ts (7 tests) 219ms
- ✓ test/x402.test.ts (12 tests) 451ms
- ✓ test/mirror-verify.test.ts (11 tests) 465ms
- ✓ test/hedera.test.ts (17 tests) 471ms
+ ✓ test/money.test.ts (13 tests) 27ms
+ ✓ test/types.test.ts (18 tests) 6ms
+ ✓ test/api-human-do.test.ts (18 tests) 36ms
+ ✓ test/notary.test.ts (18 tests) 164ms
+ ✓ test/api-lifecycle.test.ts (16 tests) 108ms
+ ✓ test/verify.test.ts (7 tests) 220ms
+ ✓ test/x402.test.ts (12 tests) 459ms
+ ✓ test/mirror-verify.test.ts (11 tests) 481ms
+ ✓ test/hedera.test.ts (17 tests) 476ms
 
  Test Files  9 passed (9)
-      Tests  128 passed (128)
-   Start at  22:19:30
-   Duration  1.11s (transform 779ms, setup 0ms, collect 1.15s, tests 1.93s, environment 4ms, prepare 732ms)
+      Tests  130 passed (130)
+   Start at  00:15:56
+   Duration  856ms (transform 573ms, setup 0ms, collect 905ms, tests 1.98s, environment 1ms, prepare 764ms)
 ```
 
 ---
@@ -91,8 +96,8 @@ x402 payment rail — hedera:testnet
   ✓ facilitator fee payer merged in: 0.0.7162784
 
 2. Record balances before payment
-      agent  19.4 USDC
-      payTo  15.6 USDC
+      agent  19.22 USDC
+      payTo  15.78 USDC
   ✓ balances read
 
 3. Agent signs a Hedera transfer for the challenge
@@ -107,38 +112,39 @@ x402 payment rail — hedera:testnet
   ✓ underpayment rejected — "amount below required price"
 
 6. Facilitator settles on Hedera
-  ✓ settled — tx 0.0.7162784@1785516580.954970507
-      https://hashscan.io/testnet/transaction/0.0.7162784@1785516580.954970507
+  ✓ settled — tx 0.0.7162784@1785523571.436932810
+      https://hashscan.io/testnet/transaction/0.0.7162784@1785523571.436932810
 
 7. Independent confirmation on a public Mirror Node
-  ✓ confirmed in consensus at 1785516590.406578104
+  ✓ confirmed in consensus at 1785523576.829423104
       payer  0.0.9847870
       payee  0.0.9847867
       amount 0.5 USDC
 
 8. Negative — replaying the settled payment must fail
-  ✓ replay rejected — "transaction 0.0.7162784@1785516580.954970507 failed precheck with status DUPLICATE_TRANSACTION against node account id 0.0.3"
+  ✓ replay rejected — "transaction 0.0.7162784@1785523571.436932810 failed precheck with status DUPLICATE_TRANSACTION against node account id 0.0.5"
 
 9. Confirm value actually moved
-      agent  19.4 → 18.9  (-0.5)
-      payTo  15.6 → 16.1  (0.5)
+      agent  19.22 → 18.72  (-0.5)
+      payTo  15.78 → 16.28  (0.5)
   ✓ payee credited 0.5 USDC
   ✓ agent debited exactly the price — facilitator covered the network fee
 
-  HashScan: https://hashscan.io/testnet/transaction/0.0.7162784@1785516580.954970507
+  HashScan: https://hashscan.io/testnet/transaction/0.0.7162784@1785523571.436932810
 
 ALL PASS — 15 passed, 0 failed
 ```
 
 Two details worth pointing at:
 
-- **The agent is debited exactly the price — no gas.** The transaction id belongs to
-  `0.0.7162784`, the *facilitator*, because it is the fee payer. A paying agent therefore needs
-  the payment asset and nothing else. This is the property the Hedera x402 scheme gives you that
-  the EVM version does not.
-- **Replay fails at the network, not just in our database.** The signed transaction carries its
-  own id, so resubmitting it is rejected by consensus with `DUPLICATE_TRANSACTION` before it ever
-  reaches our replay guard.
+- **The agent is debited exactly the price — no gas on the payment itself.** The transaction id
+  belongs to `0.0.7162784`, the *facilitator*, because it is the fee payer. An agent needs the
+  payment asset and a little HBAR for the one-time token association, nothing more. This is the
+  property the Hedera x402 scheme gives you that the EVM version does not.
+- **Replay is refused before it reaches our database.** The signed transaction carries its own
+  id, so resubmitting it inside its validity window is rejected with `DUPLICATE_TRANSACTION`.
+  Past that window, the unique index on `payments.tx_hash` is what stops it — `pnpm test:db`
+  covers that path.
 
 ---
 
@@ -164,17 +170,17 @@ Settlement primitives
   ✓ converts HashScan tx id → mirror form
 
 3. Native payout to an oracle account
-      oracle 0.0.9847870 before: 18.9 USDC
-  ✓ payout settled — 0.0.9847867@1785516598.346094299
-      https://hashscan.io/testnet/transaction/0.0.9847867@1785516598.346094299
+      oracle 0.0.9847870 before: 18.72 USDC
+  ✓ payout settled — 0.0.9847867@1785523580.252095185
+      https://hashscan.io/testnet/transaction/0.0.9847867@1785523580.252095185
   ✓ oracle credited exactly 0.44 USDC
 
 4. Anchor a proof to Hedera Consensus Service
-  ✓ anchored at sequence #13 — 0.0.9847867@1785516601.934866925
-      https://hashscan.io/testnet/transaction/0.0.9847867@1785516601.934866925
+  ✓ anchored at sequence #16 — 0.0.9847867@1785523589.511680375
+      https://hashscan.io/testnet/transaction/0.0.9847867@1785523589.511680375
 
 5. Read the anchor back from a public Mirror Node
-  ✓ anchor readable from public mirror at consensus 1785516608.406656104
+  ✓ anchor readable from public mirror at consensus 1785523593.685741104
   ✓ anchored payload matches what we wrote
       anyone can replay this topic — no GroundTruth API required
 
@@ -195,12 +201,12 @@ MongoDB integration
   ✓ index is partial, so demo rows with no tx do not collide
 
 2. Task round trip
-  ✓ inserted task ec15f13f-5d03-4f54-bd85-3537d81a05b9
+  ✓ inserted task 2b53f76c-7159-4962-99b2-b09aa82cfd20
   ✓ read back with matching fields
   ✓ starts pending
 
 3. Atomic claim
-  ✓ exactly 1 of 10 concurrent claims won (0.0.900001)
+  ✓ exactly 1 of 10 concurrent claims won (0.0.900000)
   ✓ task is claimed
   ✓ a later claim is refused
 
@@ -216,14 +222,14 @@ MongoDB integration
   ✓ same-status write allowed so settlement can merge
 
 6. Proof storage (GridFS)
-  ✓ uploaded proof: ec15f13f-5d03-4f54-bd85-3537d81a05b9/0-c414cd0e.png
+  ✓ uploaded proof: 2b53f76c-7159-4962-99b2-b09aa82cfd20/0-c414cd0e.png
   ✓ content type sniffed from bytes, not the filename
   ✓ bytes round-trip through GridFS unchanged
   ✓ re-upload replaces rather than duplicates
 
 7. Signed proof URLs
   ✓ signed URL minted
-      http://localhost:3000/api/proofs/ec15f13f-5d03-4f54-bd85-3537d81a05b9/0-c414cd0e.png?exp=1785520182&sig=fb8559bda48d2377e30f05f6210bf567490ba99747d2714bed67c787fa4fd183
+      http://localhost:3000/api/proofs/2b53f76c-7159-4962-99b2-b09aa82cfd20/0-c414cd0e.png?exp=1785527168&sig=123e6ebe3ab2c7754c06aecbfa678b854dd4a64c60e23d9ac2dd85de6fbe95dc
   ✓ valid signature accepted
   ✓ forged signature rejected
   ✓ signature bound to its own key — cannot be reused for another proof
@@ -276,8 +282,8 @@ Payment gate
 
 Paid task creation (real USDC)
   ✓ POST /api/v1/human-do (valid payment) → 201
-  ✓ task created 0b967049-42fd-41af-94f3-ec7932272aa1
-      payment tx 0.0.7162784@1785516624.353687013
+  ✓ task created cfe95a04-e24f-41c0-95e0-6241e68c696a
+      payment tx 0.0.7162784@1785523604.983018738
   ✓ POST /api/v1/human-do (replayed payment) → 402
   ✓ GET  /api/v1/tasks/:id → 200
 
@@ -287,19 +293,19 @@ Claim
   ✓ POST /api/tasks/:id/claim (already claimed) → 409
 
 Submit proof
-      freshness code: EEWQ2C
+      freshness code: BDHMAJ
   ✓ POST /api/tasks/:id/submit (not your task) → 403
   ✓ POST /api/tasks/:id/submit (no freshness code) → 200
   ✓ proof without the freshness code is rejected
   ✓ no payout on a rejected proof
   ✓ POST /api/tasks/:id/submit (valid retry) → 200
-      notary: accept — The submission clearly states the shop's opening hours.
+      notary: accept — It provides a clear statement of shop hours.
 
 Review and payout
   ✓ notary auto-accepted and settled inline
   ✓ oracle paid — 0.44 USDC
-      https://hashscan.io/testnet/transaction/0.0.9847867@1785516634.127380694
-  ✓ proof anchored at HCS #14
+      https://hashscan.io/testnet/transaction/0.0.9847867@1785523621.110283295
+  ✓ proof anchored at HCS #17
 
 Proof access control
   ✓ GET  /api/v1/tasks/:id (verified) → 200
@@ -327,14 +333,14 @@ GroundTruth — full lifecycle on hedera:testnet
   server : http://localhost:3210
   asset  : USDC (0.0.429274)
   budget : 0.50
-  oracle : 0.0.9847870
+  oracle : 0.0.9860142
 
 [1] Agent fetches the 402 challenge and signs a Hedera payment
       Agent account: 0.0.9847870
       Network: hedera:testnet
       Asset: USDC (0.0.429274, 6dp)
       Token already associated
-      Balance: 19.28 USDC (need 0.50)
+      Balance: 18.66 USDC (need 0.50)
       Requesting 402 challenge from http://localhost:3210/api/v1/human-do...
       Challenge: 500000 atomic units of 0.0.429274 to 0.0.9847867 (hedera:testnet)
       Signing Hedera transfer for x402 exact scheme...
@@ -342,31 +348,31 @@ GroundTruth — full lifecycle on hedera:testnet
   ✓ signed by 0.0.9847870
 
 [2] Paid request creates the task
-  ✓ task cc636185-78ec-4428-b094-c4fc4e1750a3 created
-      payment tx 0.0.7162784@1785516643.872521764
-      https://hashscan.io/testnet/transaction/0.0.7162784@1785516643.872521764
+  ✓ task b31d77c6-f2c1-40f2-b467-90ba2c1b141a created
+      payment tx 0.0.7162784@1785523629.505413662
+      https://hashscan.io/testnet/transaction/0.0.7162784@1785523629.505413662
 
 [3] Mirror node confirms the payment
   ✓ confirmed — 0.5 USDC from 0.0.9847870
 
 [4] A human oracle claims the mission
-  ✓ claimed by 0.0.9847870
+  ✓ claimed by 0.0.9860142
 
 [5] Oracle submits photo proof
-      freshness code for this task: BZZT4F
+      freshness code for this task: JCKTPA
   ✓ submitted — status verified
-      notary: accept (The image is a graphic representation of a coffee shop entrance with an 'OPEN' sign, and the required code is clearly visible.)
+      notary: accept (The image is a graphic representation of a coffee shop entrance with an 'OPEN' sign and the required code 'JCKTPA' clearly visible.)
 
 [6] Notary auto-accepted — no manual review needed
   ✓ auto-verified
 
 [7] Oracle is paid on Hedera and the proof is anchored to HCS
-  ✓ payout tx 0.0.9847867@1785516706.062362736
-      https://hashscan.io/testnet/transaction/0.0.9847867@1785516706.062362736
+  ✓ payout tx 0.0.9847867@1785523695.053277836
+      https://hashscan.io/testnet/transaction/0.0.9847867@1785523695.053277836
   ✓ paid 0.44 USDC
-  ✓ proof anchored at HCS sequence #15
+  ✓ proof anchored at HCS sequence #18
       https://hashscan.io/testnet/topic/0.0.9847942
-      oracle balance 19.28 → 19.22 (-0.06)
+      oracle balance 0.44 → 0.88 (0.44)
 
 [8] Paying agent retrieves the proof it paid for
   ✓ task reports verified
@@ -375,19 +381,19 @@ GroundTruth — full lifecycle on hedera:testnet
   ✓ the same URL without a signature is refused
 
   HashScan
-    payment : https://hashscan.io/testnet/transaction/0.0.7162784@1785516643.872521764
-    payout  : https://hashscan.io/testnet/transaction/0.0.9847867@1785516706.062362736
+    payment : https://hashscan.io/testnet/transaction/0.0.7162784@1785523629.505413662
+    payout  : https://hashscan.io/testnet/transaction/0.0.9847867@1785523695.053277836
     anchor  : https://hashscan.io/testnet/topic/0.0.9847942
-    board   : http://localhost:3210/tasks/cc636185-78ec-4428-b094-c4fc4e1750a3
+    board   : http://localhost:3210/tasks/b31d77c6-f2c1-40f2-b467-90ba2c1b141a
 
 ALL PASS — 13 passed, 0 failed
 ```
 
-**Payment:** [`0.0.7162784@1785516643.872521764`](https://hashscan.io/testnet/transaction/0.0.7162784@1785516643.872521764)
-**Payout:** [`0.0.9847867@1785516706.062362736`](https://hashscan.io/testnet/transaction/0.0.9847867@1785516706.062362736)
+**Payment:** [`0.0.7162784@1785523629.505413662`](https://hashscan.io/testnet/transaction/0.0.7162784@1785523629.505413662)
+**Payout:** [`0.0.9847867@1785523695.053277836`](https://hashscan.io/testnet/transaction/0.0.9847867@1785523695.053277836)
 
-The freshness code is generated per task and rendered into the proof image at submit time, so
-the vision model is genuinely reading that task's code rather than matching a fixture.
+The freshness code is generated per task and rendered into the proof image at submit time, so the
+vision model is reading that task's code rather than matching a fixture.
 
 ---
 
@@ -401,7 +407,8 @@ plus children like the `CRYPTOUPDATEACCOUNT` emitted when a payer's account was 
 an EVM alias. The child is frequently returned **first** and carries an empty transfer list.
 Reading `transactions[0]` therefore found no payment and reported every genuine payment as
 unconfirmed. Fixed by scanning all successful records and summing credits to the payee. The same
-fix corrected payer attribution: the largest debit is the *fee payer*, not the sender.
+fix corrected payer attribution: the old code took the first debit in the list, which can be the
+fee payer rather than the sender, so the payer is now matched on the exact transfer amount.
 
 **2. Decimals were hardcoded to 6.**
 `toUnits` assumed a 6-decimal asset. HBAR is quoted in tinybars at 8, so a task priced `"2.00"`
@@ -411,8 +418,8 @@ the configured asset.
 **3. ED25519 keys were parsed as ECDSA.**
 `parsePrivateKey` tried `fromStringECDSA` first and fell back on throw. The SDK does **not** throw
 on an ED25519 DER string — it derives a *different* public key, so the account id is wrong and
-every signature fails for no visible reason. Hedera Portal issues both key types. The curve is now
-read from the DER algorithm identifier.
+every signature fails for no visible reason. Hedera Portal issues both key types. For DER keys the
+curve is now read from the algorithm identifier.
 
 **4. The task state machine was decorative.**
 `VALID_TRANSITIONS` and `canTransition` looked authoritative, but `transition()` did a bare
@@ -437,13 +444,21 @@ payout through the review route. Anyone could have harvested it and force-accept
 proof. The route now projects an explicit allowlist, the credential is compared in constant time,
 and the endpoint suite asserts it is absent.
 
-Findings 6 and 7 came from an adversarial audit of this repository's own documentation against
-its code — nine judges, one per claim group, each instructed to refute rather than confirm.
+**8. A caller could set their own price.**
+`budget_usdt` is caller-supplied and becomes the price the entire pipeline enforces — verify,
+settle and the mirror gate all check against it. The schema constrained only the format, so a
+caller could declare a budget of `0.000001`, pay that, and clear all three gates legitimately.
+The route now rejects any budget below the configured list price.
+
+Findings 6, 7 and 8 came from an adversarial audit of this repository's own documentation against
+its code — nine judges, one per claim group, each instructed to refute rather than confirm. They
+examined 132 claims and flagged 92; most were wording, four were defects, and two of those were
+security bugs.
 
 ---
 
 ## Not covered here
 
 The semantic notary's *judgement quality* is not tested — that is inherently probabilistic. What
-is tested is that an unverifiable proof never auto-pays: the notary abstains and the task is held
-for the paying agent.
+is tested is that an unverifiable proof never auto-pays: when the model cannot run, the notary
+abstains and the task is held for the paying agent.
