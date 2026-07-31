@@ -72,6 +72,11 @@ Two windows, nothing else:
 - **B — an MCP client** (Claude Desktop) connected to
   `https://groundtruth-hedera.vercel.app/api/mcp`
 
+You do **not** type `human_do` anywhere. You ask a normal question in plain English; the
+agent decides to call the tool, fills in the arguments, and pays. That decision is the
+demo. The oracle's payout address is a typed Hedera account id on the mission page —
+there is no wallet-connect extension, so have `0.0.9860142` on your clipboard.
+
 Have the proof photo on your desktop, ready to drag. Do one full dry run first — the
 agent wallet `0.0.9847870` holds **15.10 USDC**, so at 0.50/task you get ~30 attempts.
 
@@ -95,8 +100,10 @@ The agent calls `human_do`, pays over x402 on Hedera, and returns a `task_id`. L
 result sit on screen — it shows `paid: true` and the payment transaction id. **That is the
 bounty criterion, shown by the product paying for itself rather than by a curl command.**
 
-> If the result ever says `created_unpaid_demo`, stop and re-record — that is the demo
-> bypass, and it means no funds moved.
+> You cannot accidentally record an unpaid task. The demo bypass requires
+> `ALLOW_DEMO_BYPASS=true` **and** `NODE_ENV !== 'production'`, and production satisfies
+> neither — if the x402 payment ever fails, the tool returns an error and creates nothing.
+> Rehearsed live: the call charges 0.50 USDC and returns a real payment tx id.
 
 ### 1:00–1:30 — The mission is live
 
@@ -146,8 +153,8 @@ One line per beat. Calm and flat; do not sell.
 - **Notary is rate-limited (429)** — turn it into a feature: *"the model was rate-limited, so
   the notary abstained and the task waits for the agent to decide. It never auto-pays
   something it couldn't verify."*
-- **The tool result says `created_unpaid_demo`** — the x402 payment failed and the bypass
-  caught it. Check the agent wallet balance before re-recording.
+- **The tool returns an error instead of a task** — the x402 payment failed (most likely the
+  agent wallet ran dry). Check the balance; the bypass cannot fire in production.
 
 ### The longer 4:40 cut, if you want it
 
