@@ -124,18 +124,38 @@ async function verifyPhoto(
           detail: minRes ? 'ok' : 'low resolution',
         })
 
-        // Soft: perceptual hash dedup
+        // Dedup against recently submitted proofs.
+        //
+        // `recentHashes` must be perceptual hashes produced by this same
+        // function — comparing them against, say, a SHA-256 digest silently
+        // never matches, because a hex digest is never within a few bits of a
+        // 64-bit '0'/'1' string and both happen to be 64 chars long, so even a
+        // length guard does not catch the mistake.
+        //
+        // An EXACT repeat is a hard fail: resubmitting a byte-identical image
+        // is unambiguous reuse. A near match is advisory, because two honest
+        // photos of the same storefront minutes apart are legitimately similar.
         try {
           const phash = await computePHash(sharp, buf)
-          const isDupe = recentHashes.some(h => hammingDistance(h, phash) < 10)
+          const exact = recentHashes.some(h => h === phash)
+          const near = !exact && recentHashes.some(h => hammingDistance(h, phash) < NEAR_DUPLICATE_BITS)
+
           checks.push({
             name: `dedup_${i}`,
-            passed: !isDupe,
-            severity: 'soft',
-            detail: isDupe ? 'duplicate image detected' : 'unique',
+            passed: !exact,
+            severity: 'hard',
+            detail: exact ? 'identical image already submitted' : 'not an exact duplicate',
           })
+          if (near) {
+            checks.push({
+              name: `similar_${i}`,
+              passed: false,
+              severity: 'soft',
+              detail: 'visually similar to a recent submission',
+            })
+          }
         } catch {
-          // hash computation failed — soft pass (don't fail on our own error)
+          // Hash computation failed — our fault, not the worker's. Soft pass.
           checks.push({ name: `dedup_${i}`, passed: true, severity: 'soft', detail: 'hash unavailable' })
         }
       } catch {
@@ -191,6 +211,25 @@ function verifyForm(spec: ProofSpec, payload: ProofPayload): VerificationCheck[]
   }
 
   return checks
+}
+
+/** Hamming distance below which two images count as visually similar. */
+const NEAR_DUPLICATE_BITS = 10
+
+/**
+ * 64-bit average perceptual hash, as a string of '0'/'1'.
+ *
+ * Exported because the submit route must store EXACTLY this value — storing a
+ * cryptographic digest instead makes every later comparison silently useless.
+ */
+export async function proofPerceptualHash(buf: Buffer): Promise<string | null> {
+  const sharp = await getSharp()
+  if (!sharp) return null
+  try {
+    return await computePHash(sharp, buf)
+  } catch {
+    return null
+  }
 }
 
 async function computePHash(sharp: NonNullable<Awaited<ReturnType<typeof getSharp>>>, buf: Buffer): Promise<string> {

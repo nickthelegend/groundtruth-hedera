@@ -143,9 +143,17 @@ const handler = createMcpHandler(
           }
         }
 
-        // Fallback: demo bypass if ADMIN_SECRET is set
+        // Fallback: the unpaid demo bypass.
+        //
+        // This creates a task WITHOUT a payment, so it must never be reached by
+        // accident. It requires the same explicit opt-in the API enforces
+        // (ALLOW_DEMO_BYPASS=true, non-production), and the response below says
+        // plainly that nothing was paid — silently reporting "created" after a
+        // payment failure would misrepresent an unpaid task as a paid one.
         const adminSecret = process.env.ADMIN_SECRET
-        if (adminSecret) {
+        const bypassAllowed =
+          process.env.ALLOW_DEMO_BYPASS === 'true' && process.env.NODE_ENV !== 'production'
+        if (adminSecret && bypassAllowed) {
           try {
             const res = await fetch(`${appUrl}/api/v1/human-do`, {
               method: 'POST',
@@ -164,15 +172,19 @@ const handler = createMcpHandler(
                 content: [{
                   type: 'text' as const,
                   text: JSON.stringify({
-                    status: 'created',
+                    status: 'created_unpaid_demo',
+                    paid: false,
+                    warning:
+                      'DEMO BYPASS: this task was created WITHOUT an x402 payment because ' +
+                      'ALLOW_DEMO_BYPASS is enabled and the x402 payment failed. No funds moved ' +
+                      'and no Hedera transaction exists. Disable ALLOW_DEMO_BYPASS for real use.',
+                    payment_error: payError ?? 'x402 payment was rejected',
                     task_id: data.task_id,
                     budget_usdt: data.budget_usdt ?? amount,
                     expires_at: data.expires_at,
                     poll_url: `${appUrl}/api/v1/tasks/${data.task_id}`,
                     board_url: `${appUrl}/tasks/${data.task_id}`,
-                    estimated_completion: 'varies with human-oracle availability',
-                    next_step: 'Call task_status with this task_id to retrieve the human-completed, AI-verified proof and the on-chain settlement transaction.',
-                    message: 'Task submitted to the human-oracle network. A human completes it in the real world and an AI notary verifies the proof; payout settles on-chain. Poll task_status for the verified result.',
+                    next_step: 'Call task_status with this task_id to retrieve the human-completed, AI-verified proof.',
                   }),
                 }],
               }

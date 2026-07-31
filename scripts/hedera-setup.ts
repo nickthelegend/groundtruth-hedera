@@ -107,8 +107,20 @@ async function main() {
 
   // ── 2. HCS proof topic ──────────────────────────────────────────────────────
   console.log('')
-  if (process.env.HEDERA_PROOF_TOPIC_ID) {
-    console.log(`- proof topic: already configured (${process.env.HEDERA_PROOF_TOPIC_ID})`)
+  // Only a REAL entity id counts as configured. An unreplaced placeholder such
+  // as `0.0.zzzzz` is truthy, and treating it as configured would silently skip
+  // topic creation and leave every later anchor pointing at nothing.
+  const existingTopic = process.env.HEDERA_PROOF_TOPIC_ID?.trim()
+  const topicConfigured = !!existingTopic && /^\d+\.\d+\.\d+$/.test(existingTopic)
+
+  if (existingTopic && !topicConfigured) {
+    console.log(
+      `- proof topic: "${existingTopic}" is not a valid entity id — ignoring it and creating a real topic`
+    )
+  }
+
+  if (topicConfigured) {
+    console.log(`- proof topic: already configured (${existingTopic})`)
   } else {
     try {
       const topic = await createProofTopic()

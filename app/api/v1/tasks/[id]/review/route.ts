@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash, timingSafeEqual } from 'crypto'
 import { getTask, transition } from '@/lib/db'
 import { settleTask } from '@/lib/settle'
+
+/**
+ * Constant-time comparison of two secrets of arbitrary length. Hashing first
+ * makes both operands a fixed 32 bytes, so timingSafeEqual cannot throw on a
+ * length mismatch and the comparison leaks nothing about length either.
+ */
+function secretEquals(a: string, b: string): boolean {
+  return timingSafeEqual(
+    createHash('sha256').update(a).digest(),
+    createHash('sha256').update(b).digest()
+  )
+}
 
 // Agent verification: the calling agent reviews the submitted proof and
 // accepts or rejects it. Accept → task verified + on-chain payout to the
@@ -28,11 +41,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Task not found' }, { status: 404 })
   }
 
+  // Both credentials release money, so compare them in constant time — a plain
+  // `===` leaks how much of a guess was correct through response timing.
   const adminSecret = process.env.ADMIN_SECRET
   const demoKey = req.headers.get('X-DEMO-KEY')
   const authed =
-    (!!adminSecret && demoKey === adminSecret) ||
-    (!!task.payment_ref && !!body.payment_ref && body.payment_ref === task.payment_ref)
+    (!!adminSecret && !!demoKey && secretEquals(demoKey, adminSecret)) ||
+    (!!task.payment_ref && !!body.payment_ref && secretEquals(body.payment_ref, task.payment_ref))
   if (!authed) {
     return NextResponse.json({ error: 'Unauthorized — provide the task payment_ref or admin key' }, { status: 401 })
   }

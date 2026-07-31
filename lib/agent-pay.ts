@@ -46,12 +46,19 @@ export interface AgentPayResult {
 }
 
 function agentSigner() {
-  const accountId = process.env.AGENT_ACCOUNT_ID ?? process.env.HEDERA_OPERATOR_ID
-  const rawKey = process.env.AGENT_PRIVATE_KEY ?? process.env.HEDERA_OPERATOR_KEY
+  // Deliberately NO fallback to the operator/treasury key.
+  //
+  // Falling back would make the treasury pay itself: the same account signs the
+  // payment, receives it, and later pays the worker — collapsing the
+  // agent → treasury → worker trail the whole design rests on, and doing it
+  // silently, because the flow still "works".
+  const accountId = process.env.AGENT_ACCOUNT_ID
+  const rawKey = process.env.AGENT_PRIVATE_KEY
 
   if (!accountId || !rawKey) {
     throw new Error(
-      'No agent wallet configured (set AGENT_ACCOUNT_ID + AGENT_PRIVATE_KEY, or HEDERA_OPERATOR_ID + HEDERA_OPERATOR_KEY)'
+      'No agent wallet configured. Set AGENT_ACCOUNT_ID and AGENT_PRIVATE_KEY to an account ' +
+        'SEPARATE from the treasury (HEDERA_OPERATOR_ID), so payments are not the treasury paying itself.'
     )
   }
 

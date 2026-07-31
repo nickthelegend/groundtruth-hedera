@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTask, transition, recordProofHash, recentProofHashes, bumpWorker } from '@/lib/db'
-import { verifyProof } from '@/lib/verify'
+import { verifyProof, proofPerceptualHash } from '@/lib/verify'
 import { settleTask } from '@/lib/settle'
 import { uploadProofImages } from '@/lib/storage'
 import { notaryReview } from '@/lib/notary'
@@ -105,13 +105,17 @@ async function handleSubmit(req: NextRequest, params: { id: string }) {
   const recentHashes = proofType === 'photo' ? await recentProofHashes(60) : []
   const result = await verifyProof(task.proof_spec as any, proofPayload, imageBuffers, recentHashes, task.intent)
 
-  // Store proof hashes for dedup (photos only)
+  // Store proof hashes for dedup (photos only).
+  //
+  // This MUST be the same perceptual hash verifyProof compares against. It used
+  // to store a SHA-256 digest, which is also 64 characters — so the length
+  // guard passed, nothing ever matched, and the duplicate check silently did
+  // nothing at all.
   if (proofType === 'photo') {
     for (const buf of imageBuffers) {
       try {
-        const { createHash } = await import('crypto')
-        const hash = createHash('sha256').update(buf).digest('hex')
-        await recordProofHash(params.id, hash)
+        const phash = await proofPerceptualHash(buf)
+        if (phash) await recordProofHash(params.id, phash)
       } catch {}
     }
   }

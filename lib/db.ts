@@ -332,6 +332,14 @@ export async function listTransactions(limit = 25): Promise<LedgerEntry[]> {
   return [...inflows, ...payouts].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit)
 }
 
+/**
+ * Headline counters.
+ *
+ * `total_paid_usdt` is the sum of INBOUND agent payments, not oracle payouts —
+ * payouts are the budget minus the platform fee and only for verified tasks, so
+ * the two figures legitimately differ. It is surfaced as "paid in by agents"
+ * rather than "paid out"; do not relabel it without changing the query.
+ */
 export async function pulseStats(): Promise<{
   total_tasks: number
   verified_tasks: number

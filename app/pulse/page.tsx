@@ -32,7 +32,7 @@ export default async function PulsePage() {
         {stats ? (
           <div className="grid grid-cols-2 gap-4">
             {[
-              { value: `$${stats.total_paid_usdt}`, label: 'Total paid out', accent: 'var(--accent)' },
+              { value: stats.total_paid_usdt, label: 'Total paid in by agents', accent: 'var(--accent)' },
               { value: String(stats.verified_tasks), label: 'Missions verified', accent: 'var(--good)' },
               { value: String(stats.active_workers), label: 'Active oracles', accent: 'var(--info)' },
               { value: String(stats.total_tasks), label: 'Tasks posted', accent: 'var(--warn)' },

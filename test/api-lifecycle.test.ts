@@ -27,8 +27,14 @@ vi.mock('@/lib/storage', () => ({
   proofBucket: 'proofs',
 }))
 
+// verifyProof is stubbed so each test can drive the integrity outcome, but
+// proofPerceptualHash stays REAL — the bug these tests guard against was the
+// route storing the wrong kind of hash, which a stubbed hasher would hide.
 const verifyProof = vi.fn()
-vi.mock('@/lib/verify', () => ({ verifyProof }))
+vi.mock('@/lib/verify', async () => {
+  const actual = await vi.importActual<typeof import('../lib/verify')>('../lib/verify')
+  return { verifyProof, proofPerceptualHash: actual.proofPerceptualHash }
+})
 
 const notaryReview = vi.fn()
 vi.mock('@/lib/notary', () => ({ notaryReview }))
@@ -40,6 +46,13 @@ const { POST: claimRoute } = await import('../app/api/tasks/[id]/claim/route')
 const { POST: submitRoute } = await import('../app/api/tasks/[id]/submit/route')
 
 const WORKER = '0.0.9847870'
+
+// A real 1x1 PNG. The perceptual hash needs bytes sharp can actually decode —
+// a Buffer.from('anything') yields no hash at all.
+const REAL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+)
 
 function claimReq(body: unknown) {
   return new Request('http://localhost/api/tasks/x/claim', {
@@ -294,16 +307,57 @@ describe('POST /api/tasks/:id/submit — authorisation and payout gating', () =>
     expect(settleTask).not.toHaveBeenCalled()
   })
 
-  it('records a proof hash so duplicates can be detected later', async () => {
+  it('records a PERCEPTUAL hash so duplicates can actually be detected', async () => {
+    // Regression: this used to store a SHA-256 digest while verifyProof compared
+    // perceptual hashes. Both are 64 characters, so the length guard passed,
+    // nothing ever matched, and the duplicate check silently did nothing.
     verifyProof.mockResolvedValue({ outcome: 'verified', checks: [] })
     notaryReview.mockResolvedValue({ decision: 'accept', confidence: 0.9, reason: '', checked: true, mode: 'photo' })
     const task = makeTask({ status: 'claimed', worker_wallet: WORKER })
     state.tasks.set(task.id, task)
 
     await submitRoute(
-      submitReq({ task_id: task.id, worker_wallet: WORKER, proof_type: 'photo' }, [Buffer.from('unique')]),
+      submitReq({ task_id: task.id, worker_wallet: WORKER, proof_type: 'photo' }, [REAL_PNG]),
       { params: { id: task.id } }
     )
+
     expect(state.proofHashes.length).toBe(1)
+    const stored = state.proofHashes[0].phash
+
+    // Exact check: what the route stored must be byte-for-byte the perceptual
+    // hash verifyProof will later compare against. Asserting only the shape is
+    // not enough — a uniform image hashes to all zeros, which is also valid hex.
+    const { proofPerceptualHash } = await vi.importActual<typeof import('../lib/verify')>('../lib/verify')
+    expect(stored).toBe(await proofPerceptualHash(REAL_PNG))
+    expect(stored).toMatch(/^[01]{64}$/)
+
+    // And it must NOT be the SHA-256 digest the route used to store.
+    const { createHash } = await import('crypto')
+    expect(stored).not.toBe(createHash('sha256').update(REAL_PNG).digest('hex'))
+  })
+
+  it('feeds the stored hash back into verification so a repeat is comparable', async () => {
+    verifyProof.mockResolvedValue({ outcome: 'verified', checks: [] })
+    notaryReview.mockResolvedValue({ decision: 'accept', confidence: 0.9, reason: '', checked: true, mode: 'photo' })
+
+    const first = makeTask({ status: 'claimed', worker_wallet: WORKER })
+    state.tasks.set(first.id, first)
+    await submitRoute(
+      submitReq({ task_id: first.id, worker_wallet: WORKER, proof_type: 'photo' }, [REAL_PNG]),
+      { params: { id: first.id } }
+    )
+
+    const second = makeTask({ status: 'claimed', worker_wallet: WORKER })
+    state.tasks.set(second.id, second)
+    await submitRoute(
+      submitReq({ task_id: second.id, worker_wallet: WORKER, proof_type: 'photo' }, [REAL_PNG]),
+      { params: { id: second.id } }
+    )
+
+    // The second submission must have been shown the first one's hash — that is
+    // the wiring that was broken.
+    const lastCall = verifyProof.mock.calls.at(-1)!
+    const recentHashes = lastCall[3] as string[]
+    expect(recentHashes).toContain(state.proofHashes[0].phash)
   })
 })

@@ -88,6 +88,15 @@ async function main() {
   const open = await expectStatus('GET  /api/tasks', `${BASE}/api/tasks`, 200)
   Array.isArray(open) ? pass('tasks returns an array') : bad('tasks shape wrong')
 
+  // payment_ref authorises an on-chain payout via the review route. It must
+  // never appear on this unauthenticated endpoint.
+  const leaked = Array.isArray(open)
+    ? open.filter((t: Record<string, unknown>) => 'payment_ref' in t)
+    : []
+  leaked.length === 0
+    ? pass('public task list does not leak payment_ref')
+    : bad(`SECURITY: /api/tasks exposed payment_ref on ${leaked.length} task(s)`)
+
   const faucetMeta = await expectStatus('GET  /api/faucet (metadata)', `${BASE}/api/faucet`, 200)
   faucetMeta?.asset ? pass(`faucet advertises asset ${faucetMeta.asset}`) : bad('faucet metadata missing asset')
 

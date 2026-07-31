@@ -13,11 +13,11 @@ Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
 | | |
 |---|---|
-| x402 payment settled | [`0.0.7162784@1785512788.541262413`](https://hashscan.io/testnet/transaction/0.0.7162784@1785512788.541262413) |
-| Oracle payout | [`0.0.9847867@1785512804.941540023`](https://hashscan.io/testnet/transaction/0.0.9847867@1785512804.941540023) |
+| x402 payment settled | [`0.0.7162784@1785516643.872521764`](https://hashscan.io/testnet/transaction/0.0.7162784@1785516643.872521764) |
+| Oracle payout | [`0.0.9847867@1785516706.062362736`](https://hashscan.io/testnet/transaction/0.0.9847867@1785516706.062362736) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
-**230 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+**239 tests passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 ---
 
@@ -44,7 +44,7 @@ This is not an EVM app pointed at a Hedera RPC. Every on-chain surface uses a fi
 
 | Concern | How it works | Why Hedera |
 |---|---|---|
-| **Payment** | x402 `exact` scheme, `hedera:testnet`, Circle USDC (`0.0.429274`) | Agent signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. GroundTruth holds **no key on the payment path**. |
+| **Payment** | x402 `exact` scheme, `hedera:testnet`, Circle USDC (`0.0.429274`) | The payer signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. As the resource server GroundTruth holds **no key** — it only ever sees a signed transaction. |
 | **Payout** | Native HTS `TransferTransaction` to the oracle's account | No payroll contract, no allowance dance, no gas token. One transaction, final in ~3s, ~$0.001. |
 | **Proof integrity** | Proof hash + notary verdict written to an **HCS topic** | Immutable, consensus-timestamped audit trail that anyone can replay from a public Mirror Node — independent of our database. |
 | **Verification** | Public **Mirror Node** transfer-list lookup | We never take the facilitator's word that a payment settled. We re-derive it from consensus. |
@@ -53,10 +53,12 @@ This is not an EVM app pointed at a Hedera RPC. Every on-chain surface uses a fi
 
 The X Layer version of this project used the EVM `exact` scheme over Permit2: the agent signed an authorization and *we* pulled the funds with our own operator key. On Hedera the flow inverts, and it's strictly better:
 
-- The agent **signs a real transaction**, not an approval to be redeemed later.
-- The **facilitator is the fee payer**, so a paying agent needs USDC but needs *no HBAR for gas*.
-- We hold **no key** on the payment path at all — we cannot redirect, inflate, or replay a payment, because the transfer is inside the signature.
+- The payer **signs a real transaction**, not an approval to be redeemed later.
+- The **facilitator is the fee payer**, so a paying agent needs USDC but needs *no HBAR for the payment itself*. (It still needs a little HBAR to associate the token once.)
+- The **resource server holds no key** — it cannot redirect, inflate or replay a payment, because `payTo` and `amount` are inside the payer's signature and the payment reference is bound to the Hedera transaction id.
 - Settlement returns a genuine Hedera transaction id, linkable on HashScan.
+
+One honest caveat: the bundled MCP server also ships a *client-side* wallet (`AGENT_ACCOUNT_ID` / `AGENT_PRIVATE_KEY`) so an LLM with no Hedera account can pay. That wallet is the payer, not the resource server, and it must be a different account from the treasury — [`lib/agent-pay.ts`](lib/agent-pay.ts) refuses to start rather than falling back to the treasury key. A production agent would sign remotely and send only the `X-PAYMENT` header.
 
 ---
 
@@ -70,6 +72,8 @@ Three gates, all fail-closed. A payment must clear all three before a task exist
 3. CONFIRM  public mirror   → re-derive the transfer list; did payTo actually get paid?
 ```
 
+There is exactly one way to create a task without paying: a local demo bypass, off by default. It needs **both** `ALLOW_DEMO_BYPASS=true` and a matching `ADMIN_SECRET`, and is refused outright when `NODE_ENV=production`. Tasks it creates are reported as `created_unpaid_demo` with `paid: false`, and no Hedera transaction exists for them. It is there so the UI can be demoed offline; leave it unset and the three gates above are the only path.
+
 Step 3 is the one most integrations skip. A resource server should not trust a facilitator's "success" — [`lib/mirror-verify.ts`](lib/mirror-verify.ts) fetches the transaction from a public Mirror Node and checks the credit to our account in the transfer list. A fabricated transaction id has no record; a real transaction that paid someone else, or paid too little, fails the check.
 
 Replay is bound at the database layer: the payment reference is derived from the Hedera transaction id, so resubmitting the same payment collides on a unique index no matter what else the header claims.
@@ -80,7 +84,7 @@ Replay is bound at the database layer: the payment reference is derived from the
 
 Payment being real is only half the problem. Proof has to mean *verified content*, not *a decodable JPEG*.
 
-1. **Integrity gate** — correct type, image decodes, required fields present, not a duplicate. Blatant fraud fails instantly.
+1. **Integrity gate** — correct type, image decodes, required fields present, and not a byte-for-byte repeat of a recent proof. Blatant fraud fails instantly. (A merely *similar* image is flagged as advisory, not failed — two honest photos of the same storefront minutes apart are legitimately alike.)
 2. **Semantic notary** ([`lib/notary.ts`](lib/notary.ts)) — an AI judges whether the proof satisfies the task *intent*. Photos go to a vision model; forms go to an LLM.
 3. **Freshness challenge** — each task carries a per-task code the worker must include, so a stock or recycled image cannot pass.
 
@@ -144,14 +148,17 @@ MongoDB indexes — including the unique partial index on `payments.tx_hash` tha
 ### Prove it works
 
 ```bash
-pnpm test             # 120 unit + integration, offline, ~1s
+pnpm test             # 128 unit + integration, offline, ~1s
 pnpm test:db          # 27 against the real MongoDB
 pnpm test:chain       # 30 against live Hedera testnet, real USDC
-pnpm test:endpoints   # 40 HTTP routes, happy + rejection paths
+pnpm test:endpoints   # 41 HTTP routes, happy + rejection paths
 pnpm e2e              # 13-step full lifecycle
 ```
 
-**230 passing, 0 failing.** The last two need `pnpm dev` running.
+**239 passing, 0 failing.** The last two need `pnpm dev` running.
+
+[`docs/VERIFICATION.md`](docs/VERIFICATION.md) contains the **verbatim stdout** of every one of
+those commands, captured in a single sitting, plus the seven silent bugs the tests caught.
 
 `pnpm test` needs no network, database or keys — API routes run against an in-memory fake that reimplements the schema's real constraints, so the replay guard and payout gating are genuinely exercised. It runs in CI on every push.
 
@@ -159,7 +166,7 @@ pnpm e2e              # 13-step full lifecycle
 
 `pnpm test:chain` spends real USDC: it builds a 402 challenge, signs a Hedera transfer, settles it through the facilitator, confirms it on a public Mirror Node, pays an oracle, and anchors a proof to HCS. Negative cases included — a redirected `payTo`, an underpayment, and a replayed payment must all be rejected.
 
-Real transaction links, full output, and the four bugs these tests caught are in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+
 
 For the complete task lifecycle end to end (needs the server running):
 
@@ -187,7 +194,7 @@ Call human_do with:
 - budget_usdt: "2.00"
 ```
 
-The agent autonomously fetches the 402 challenge, signs a Hedera USDC transfer, and creates the task. No human approval in the loop.
+GroundTruth's bundled agent wallet fetches the 402 challenge, signs a Hedera USDC transfer, and creates the task on the caller's behalf — no human approval in the loop. The MCP client itself needs no Hedera key.
 
 ### MCP tools
 

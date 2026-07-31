@@ -10,7 +10,7 @@ const PRICE_LABEL = `${process.env.ASP_PRICE_USDT ?? '2.00'} ${
 
 const FLOW = [
   { label: 'AI asks', desc: 'An agent calls human_do via MCP', emoji: '🤖', c: 'var(--info)' },
-  { label: 'Escrow', desc: 'USDC locked on Hedera', emoji: '🔒', c: 'var(--accent)' },
+  { label: 'Paid', desc: 'USDC settles on Hedera', emoji: '🔒', c: 'var(--accent)' },
   { label: 'Human acts', desc: 'A real person goes on-site', emoji: '🚶', c: 'var(--good)' },
   { label: 'Proof', desc: 'Photo or form, verified', emoji: '📸', c: 'var(--info)' },
   { label: 'Payout', desc: 'USDC to the oracle, instantly', emoji: '💸', c: 'var(--good)' },
