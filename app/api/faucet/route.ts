@@ -13,6 +13,13 @@ import {
 } from '@/lib/hedera'
 import { toUnits, fromUnits } from '@/lib/money'
 
+// Settlement is slow by nature: the facilitator submits to Hedera, then we poll
+// a public Mirror Node until consensus catches up. That routinely runs 15-25s,
+// well past Vercel's 10s default — and a truncated request here would abort
+// AFTER funds moved. 60s is the Hobby ceiling and is comfortably enough.
+export const maxDuration = 60
+
+
 // Testnet faucet.
 //
 // On X Layer this minted from a MockUSDT contract we owned. On Hedera the

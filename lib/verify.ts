@@ -1,5 +1,6 @@
+import { createHash } from 'crypto'
 import type { ProofPayload, ProofSpec, VerificationCheck, TaskResult, VisionResult } from './types'
-import { verifyImageMatchesIntent } from './groq-vision'
+import type { ProofFingerprint } from './db'
 
 // Dynamic imports to avoid build errors when packages unavailable at type-check time
 async function getExifr() {
@@ -16,7 +17,7 @@ export async function verifyProof(
   spec: ProofSpec,
   payload: ProofPayload,
   imageBuffers?: Buffer[],
-  recentHashes?: string[],
+  recentHashes?: ProofFingerprint[],
   intent?: string
 ): Promise<TaskResult> {
   const checks: VerificationCheck[] = []
@@ -37,13 +38,15 @@ export async function verifyProof(
   const softFailCount = softChecks.filter(c => !c.passed).length
   const totalChecks = checks.length
 
-  // Advisory AI-vision content check (photo tasks): does the image actually show
-  // what was asked? A mismatch RED-FLAGS the result but never changes the
-  // outcome — the flow keeps moving. Runs after gating so it can't block.
-  let vision: VisionResult | undefined
-  if (spec.type === 'photo' && intent && imageBuffers && imageBuffers.length > 0) {
-    vision = await runVision(imageBuffers[0], intent)
-  }
+  // No vision call here on purpose.
+  //
+  // This module used to run its own advisory vision check, which meant every
+  // photo submission judged the same image TWICE with the same model — once
+  // here without the freshness code, once in lib/notary.ts with it. The second
+  // is strictly stronger and is the one that actually gates payout, so the
+  // first was pure cost: doubled latency, doubled rate-limit pressure, and with
+  // retries it could exceed the serverless function budget on its own.
+  const vision: VisionResult | undefined = undefined
 
   if (hardFail) {
     return { outcome: 'failed', checks, vision }
@@ -62,28 +65,11 @@ export async function verifyProof(
   return { outcome: 'verified', checks, confidence, vision }
 }
 
-// Build a data URL from the first image and ask the vision model if it matches.
-async function runVision(buf: Buffer, intent: string): Promise<VisionResult> {
-  try {
-    const sharp = await getSharp()
-    let mime = 'image/jpeg'
-    if (sharp) {
-      const fmt = (await sharp(buf).metadata()).format
-      if (fmt === 'png') mime = 'image/png'
-      else if (fmt === 'webp') mime = 'image/webp'
-    }
-    const dataUrl = `data:${mime};base64,${buf.toString('base64')}`
-    return await verifyImageMatchesIntent(dataUrl, intent)
-  } catch {
-    return { checked: false, match: true, confidence: 0, reason: 'vision skipped (encode error)' }
-  }
-}
-
 async function verifyPhoto(
   spec: ProofSpec,
   payload: ProofPayload,
   buffers: Buffer[],
-  recentHashes: string[]
+  recentHashes: ProofFingerprint[]
 ): Promise<VerificationCheck[]> {
   const checks: VerificationCheck[] = []
   const minPhotos = spec.minPhotos ?? 1
@@ -126,19 +112,21 @@ async function verifyPhoto(
 
         // Dedup against recently submitted proofs.
         //
-        // `recentHashes` must be perceptual hashes produced by this same
-        // function — comparing them against, say, a SHA-256 digest silently
-        // never matches, because a hex digest is never within a few bits of a
-        // 64-bit '0'/'1' string and both happen to be 64 chars long, so even a
-        // length guard does not catch the mistake.
-        //
-        // An EXACT repeat is a hard fail: resubmitting a byte-identical image
-        // is unambiguous reuse. A near match is advisory, because two honest
-        // photos of the same storefront minutes apart are legitimately similar.
+        // Two different signals, and conflating them is a trap worth spelling
+        // out. A SHA-256 digest proves the bytes are IDENTICAL — unambiguous
+        // reuse, so a hard fail. A perceptual hash only says two images LOOK
+        // alike; an 8x8 average hash collides for images that differ in a small
+        // region, so two genuinely different photos of the same storefront
+        // (or the same template with a different code printed on it) match.
+        // Failing on that would reject honest work, so similarity is advisory.
         try {
           const phash = await computePHash(sharp, buf)
-          const exact = recentHashes.some(h => h === phash)
-          const near = !exact && recentHashes.some(h => hammingDistance(h, phash) < NEAR_DUPLICATE_BITS)
+          const digest = createHash('sha256').update(buf).digest('hex')
+
+          const exact = recentHashes.some(h => !!h.sha256 && h.sha256 === digest)
+          const near =
+            !exact &&
+            recentHashes.some(h => !!h.phash && hammingDistance(h.phash, phash) < NEAR_DUPLICATE_BITS)
 
           checks.push({
             name: `dedup_${i}`,
@@ -230,6 +218,18 @@ export async function proofPerceptualHash(buf: Buffer): Promise<string | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * Both dedup signals for one image.
+ *
+ * The digest is what makes an exact repeat detectable; the perceptual hash is
+ * only a similarity hint. Store both, or the hard check silently never fires.
+ */
+export async function proofFingerprint(buf: Buffer): Promise<ProofFingerprint | null> {
+  const phash = await proofPerceptualHash(buf)
+  if (!phash) return null
+  return { phash, sha256: createHash('sha256').update(buf).digest('hex') }
 }
 
 async function computePHash(sharp: NonNullable<Awaited<ReturnType<typeof getSharp>>>, buf: Buffer): Promise<string> {

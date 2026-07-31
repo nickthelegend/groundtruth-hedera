@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTask, transition, recordProofHash, recentProofHashes, bumpWorker } from '@/lib/db'
-import { verifyProof, proofPerceptualHash } from '@/lib/verify'
+import { verifyProof, proofFingerprint } from '@/lib/verify'
 import { settleTask } from '@/lib/settle'
 import { uploadProofImages } from '@/lib/storage'
 import { notaryReview } from '@/lib/notary'
 import type { ProofPayload, ProofSpec, NotaryVerdict } from '@/lib/types'
+
+// Settlement is slow by nature: the facilitator submits to Hedera, then we poll
+// a public Mirror Node until consensus catches up. That routinely runs 15-25s,
+// well past Vercel's 10s default — and a truncated request here would abort
+// AFTER funds moved. 60s is the Hobby ceiling and is comfortably enough.
+export const maxDuration = 60
+
 
 export async function POST(
   req: NextRequest,
@@ -107,15 +114,14 @@ async function handleSubmit(req: NextRequest, params: { id: string }) {
 
   // Store proof hashes for dedup (photos only).
   //
-  // This MUST be the same perceptual hash verifyProof compares against. It used
-  // to store a SHA-256 digest, which is also 64 characters — so the length
-  // guard passed, nothing ever matched, and the duplicate check silently did
-  // nothing at all.
+  // Both signals must be stored: the digest is what makes an exact repeat a hard
+  // fail, the perceptual hash is the advisory similarity hint. Storing only one
+  // is how this check ended up doing nothing at all for the project's whole life.
   if (proofType === 'photo') {
     for (const buf of imageBuffers) {
       try {
-        const phash = await proofPerceptualHash(buf)
-        if (phash) await recordProofHash(params.id, phash)
+        const fp = await proofFingerprint(buf)
+        if (fp) await recordProofHash(params.id, fp)
       } catch {}
     }
   }

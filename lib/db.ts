@@ -164,16 +164,29 @@ export async function recordPaymentRef(params: {
   }
 }
 
-export async function recordProofHash(taskId: string, phash: string): Promise<void> {
-  const col = await proofHashesCol()
-  await col.insertOne({ task_id: taskId, phash, created_at: new Date().toISOString() })
+export interface ProofFingerprint {
+  /** Perceptual hash — near-duplicate signal, advisory. */
+  phash: string
+  /** SHA-256 of the raw bytes — exact-duplicate evidence, a hard fail. */
+  sha256: string
 }
 
-export async function recentProofHashes(limitMinutes = 60): Promise<string[]> {
+export async function recordProofHash(taskId: string, fp: ProofFingerprint): Promise<void> {
+  const col = await proofHashesCol()
+  await col.insertOne({
+    task_id: taskId,
+    phash: fp.phash,
+    sha256: fp.sha256,
+    created_at: new Date().toISOString(),
+  })
+}
+
+export async function recentProofHashes(limitMinutes = 60): Promise<ProofFingerprint[]> {
   const col = await proofHashesCol()
   const since = new Date(Date.now() - limitMinutes * 60_000).toISOString()
   const docs = await col.find({ created_at: { $gt: since } }).toArray()
-  return docs.map(d => d.phash)
+  // Legacy rows predate the digest; treat them as perceptual-only.
+  return docs.map(d => ({ phash: d.phash, sha256: d.sha256 ?? '' }))
 }
 
 export async function bumpWorker(params: {

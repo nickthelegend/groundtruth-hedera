@@ -3,6 +3,13 @@ import { createHash, timingSafeEqual } from 'crypto'
 import { getTask, transition } from '@/lib/db'
 import { settleTask } from '@/lib/settle'
 
+// Settlement is slow by nature: the facilitator submits to Hedera, then we poll
+// a public Mirror Node until consensus catches up. That routinely runs 15-25s,
+// well past Vercel's 10s default — and a truncated request here would abort
+// AFTER funds moved. 60s is the Hobby ceiling and is comfortably enough.
+export const maxDuration = 60
+
+
 /**
  * Constant-time comparison of two secrets of arbitrary length. Hashing first
  * makes both operands a fixed 32 bytes, so timingSafeEqual cannot throw on a

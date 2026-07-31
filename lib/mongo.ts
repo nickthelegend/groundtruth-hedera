@@ -32,7 +32,10 @@ export interface WorkerDoc {
 
 export interface ProofHashDoc {
   task_id: string
+  /** Perceptual hash — catches visually SIMILAR images. Advisory only. */
   phash: string
+  /** SHA-256 of the exact bytes — the only thing that proves a literal repeat. */
+  sha256?: string
   created_at: string
 }
 
@@ -86,6 +89,7 @@ async function ensureIndexes(db: Db): Promise<void> {
     db.collection('tasks').createIndex({ worker_wallet: 1 }),
     db.collection('tasks').createIndex({ status: 1, resolved_at: -1 }),
     db.collection('proof_hashes').createIndex({ phash: 1 }),
+    db.collection('proof_hashes').createIndex({ sha256: 1 }),
     db.collection('proof_hashes').createIndex({ created_at: -1 }),
     db.collection('workers').createIndex({ tasks_completed: -1 }),
   ])

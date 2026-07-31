@@ -12,7 +12,7 @@ import { canTransition } from '../../lib/types'
 export interface FakeState {
   tasks: Map<string, Task>
   payments: Map<string, { task_id: string; tx_hash: string | null; amount_units: bigint }>
-  proofHashes: { task_id: string; phash: string }[]
+  proofHashes: { task_id: string; phash: string; sha256: string }[]
   workers: Map<string, { earned: bigint; completed: number; failed: number }>
 }
 
@@ -132,11 +132,13 @@ export function buildDbMock(state: FakeState) {
       }
     ),
 
-    recordProofHash: vi.fn(async (taskId: string, phash: string) => {
-      state.proofHashes.push({ task_id: taskId, phash })
+    recordProofHash: vi.fn(async (taskId: string, fp: { phash: string; sha256: string }) => {
+      state.proofHashes.push({ task_id: taskId, ...fp })
     }),
 
-    recentProofHashes: vi.fn(async () => state.proofHashes.map(p => p.phash)),
+    recentProofHashes: vi.fn(async () =>
+      state.proofHashes.map(p => ({ phash: p.phash, sha256: p.sha256 }))
+    ),
 
     bumpWorker: vi.fn(
       async (p: { wallet: string; earned_units: bigint; outcome: 'completed' | 'failed' }) => {

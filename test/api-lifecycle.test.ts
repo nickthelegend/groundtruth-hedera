@@ -33,7 +33,7 @@ vi.mock('@/lib/storage', () => ({
 const verifyProof = vi.fn()
 vi.mock('@/lib/verify', async () => {
   const actual = await vi.importActual<typeof import('../lib/verify')>('../lib/verify')
-  return { verifyProof, proofPerceptualHash: actual.proofPerceptualHash }
+  return { verifyProof, proofFingerprint: actual.proofFingerprint }
 })
 
 const notaryReview = vi.fn()
@@ -322,18 +322,17 @@ describe('POST /api/tasks/:id/submit — authorisation and payout gating', () =>
     )
 
     expect(state.proofHashes.length).toBe(1)
-    const stored = state.proofHashes[0].phash
+    const stored = state.proofHashes[0]
 
-    // Exact check: what the route stored must be byte-for-byte the perceptual
-    // hash verifyProof will later compare against. Asserting only the shape is
-    // not enough — a uniform image hashes to all zeros, which is also valid hex.
-    const { proofPerceptualHash } = await vi.importActual<typeof import('../lib/verify')>('../lib/verify')
-    expect(stored).toBe(await proofPerceptualHash(REAL_PNG))
-    expect(stored).toMatch(/^[01]{64}$/)
-
-    // And it must NOT be the SHA-256 digest the route used to store.
-    const { createHash } = await import('crypto')
-    expect(stored).not.toBe(createHash('sha256').update(REAL_PNG).digest('hex'))
+    // Both signals must be stored. The digest is what makes an exact repeat a
+    // hard fail; the perceptual hash is only the similarity hint. Storing one
+    // without the other is how this check did nothing for the project's life.
+    const { proofFingerprint } = await vi.importActual<typeof import('../lib/verify')>('../lib/verify')
+    const expected = (await proofFingerprint(REAL_PNG))!
+    expect(stored.phash).toBe(expected.phash)
+    expect(stored.sha256).toBe(expected.sha256)
+    expect(stored.phash).toMatch(/^[01]{64}$/)
+    expect(stored.sha256).toMatch(/^[0-9a-f]{64}$/)
   })
 
   it('feeds the stored hash back into verification so a repeat is comparable', async () => {
@@ -357,7 +356,7 @@ describe('POST /api/tasks/:id/submit — authorisation and payout gating', () =>
     // The second submission must have been shown the first one's hash — that is
     // the wiring that was broken.
     const lastCall = verifyProof.mock.calls.at(-1)!
-    const recentHashes = lastCall[3] as string[]
-    expect(recentHashes).toContain(state.proofHashes[0].phash)
+    const recentHashes = lastCall[3] as { phash: string; sha256: string }[]
+    expect(recentHashes.map(h => h.sha256)).toContain(state.proofHashes[0].sha256)
   })
 })

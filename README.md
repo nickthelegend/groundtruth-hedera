@@ -9,12 +9,14 @@
 
 Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
+**Live: https://groundtruth-hedera.vercel.app** · demo script in [`SUBMISSION.md`](SUBMISSION.md)
+
 **Live on testnet in real USDC** — full lifecycle, verifiable now:
 
 | | |
 |---|---|
-| x402 payment settled | [`0.0.7162784@1785523629.505413662`](https://hashscan.io/testnet/transaction/0.0.7162784@1785523629.505413662) |
-| Oracle payout | [`0.0.9847867@1785523695.053277836`](https://hashscan.io/testnet/transaction/0.0.9847867@1785523695.053277836) |
+| x402 payment settled | [`0.0.7162784@1785524910.807306689`](https://hashscan.io/testnet/transaction/0.0.7162784@1785524910.807306689) |
+| Oracle payout | [`0.0.9847867@1785524943.299405326`](https://hashscan.io/testnet/transaction/0.0.9847867@1785524943.299405326) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
 Three distinct accounts — agent [`0.0.9847870`](https://hashscan.io/testnet/account/0.0.9847870)
@@ -22,7 +24,7 @@ Three distinct accounts — agent [`0.0.9847870`](https://hashscan.io/testnet/ac
 → oracle [`0.0.9860142`](https://hashscan.io/testnet/account/0.0.9860142) — so the on-chain trail
 is a real two-sided market, not one wallet paying itself.
 
-**241 assertions passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
+**243 assertions passing.** Reproduce with `pnpm test` — see [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 ---
 
@@ -153,14 +155,14 @@ MongoDB indexes — including the unique partial index on `payments.tx_hash` tha
 ### Prove it works
 
 ```bash
-pnpm test             # 130 unit + integration assertions, offline, ~1s
+pnpm test             # 132 unit + integration assertions, offline, ~1s
 pnpm test:db          # 27 assertions against the real MongoDB
 pnpm test:chain       # 30 assertions against live Hedera testnet, real USDC
 pnpm test:endpoints   # 41 assertions across 12 HTTP routes — spends one real payment
 pnpm e2e              # full lifecycle on testnet: 8 steps, 13 assertions
 ```
 
-**241 passing, 0 failing.** The last two need `pnpm dev` running.
+**243 passing, 0 failing.** The last two need `pnpm dev` running.
 
 [`docs/VERIFICATION.md`](docs/VERIFICATION.md) contains the **verbatim stdout** of every one of
 those commands, captured in a single sitting, plus the seven silent bugs the tests caught.
@@ -186,7 +188,7 @@ pnpm e2e
 ## Use it from an AI agent
 
 ```bash
-claude mcp add groundtruth --transport http http://localhost:3000/api/mcp
+claude mcp add groundtruth --transport http https://groundtruth-hedera.vercel.app/api/mcp
 ```
 
 Then, in an agent session:

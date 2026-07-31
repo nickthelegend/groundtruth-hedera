@@ -40,7 +40,6 @@ GroundTruth mediates money between three untrusted parties: a paying agent, a hu
 
 - Agent review authorisation is a bearer `payment_ref`. It is returned only to the paying agent, never from a public route, and compared in constant time — but it is still a shared secret, and a production build should move to a signed capability token.
 - A local demo bypass can create tasks with no payment. It requires `ALLOW_DEMO_BYPASS=true` **and** a matching `ADMIN_SECRET`, is refused when `NODE_ENV=production`, and labels what it creates `paid: false`.
-
 - Several pieces of state are process-local and reset on cold start or split across instances: faucet rate limiting and per-account cooldowns, the notary's verdict cache, and the facilitator's initialised supported-kinds. None of them gate money; the treasury balance and the database constraints do.
 - The notary errs toward paying the worker when uncertain. This is a deliberate trade: a false accept costs one task's budget, a false reject costs an honest oracle their work.
 - The HCS anchor is best-effort. A topic outage is recorded on the task but does not block or reverse a payout.

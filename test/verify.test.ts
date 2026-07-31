@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { verifyProof, proofPerceptualHash } from '../lib/verify'
+import { verifyProof, proofPerceptualHash, proofFingerprint } from '../lib/verify'
 import type { ProofSpec, ProofPayload } from '../lib/types'
 
 // Integrity gate. These tests exist because the duplicate check was dead code
@@ -54,11 +54,19 @@ describe('proofPerceptualHash', () => {
   })
 })
 
+describe('proofFingerprint', () => {
+  it('returns both a perceptual hash and a digest', async () => {
+    const { black } = await images()
+    const fp = (await proofFingerprint(black))!
+    expect(fp.phash).toMatch(/^[01]{64}$/)
+    expect(fp.sha256).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
 describe('duplicate detection', () => {
-  it('FAILS a proof that exactly repeats a recent submission', async () => {
-    // The check the docs promise. Before the fix this passed silently.
+  it('FAILS a proof whose BYTES exactly repeat a recent submission', async () => {
     const { black, blackCopy } = await images()
-    const seen = (await proofPerceptualHash(black))!
+    const seen = (await proofFingerprint(black))!
 
     const result = await verifyProof(photoSpec, photoPayload, [blackCopy], [seen], 'photo the shop')
     const dedup = result.checks.find(c => c.name.startsWith('dedup_'))
@@ -69,13 +77,39 @@ describe('duplicate detection', () => {
     expect(result.outcome).toBe('failed')
   })
 
+  it('does NOT fail a merely SIMILAR image — it flags it', async () => {
+    // The regression that broke production: an 8x8 average hash collides for
+    // images differing in a small region (same template, different code), so
+    // treating perceptual equality as proof of reuse rejects honest work.
+    const { black } = await images()
+    const sharp = (await import('sharp')).default
+    // Same field of black with one small white square — visually near-identical,
+    // different bytes.
+    const nearlyIdentical = await sharp({
+      create: { width: 64, height: 64, channels: 3, background: { r: 0, g: 0, b: 0 } },
+    })
+      .composite([{
+        input: await sharp({
+          create: { width: 4, height: 4, channels: 3, background: { r: 255, g: 255, b: 255 } },
+        }).png().toBuffer(),
+        left: 0, top: 0,
+      }])
+      .png()
+      .toBuffer()
+
+    const seen = (await proofFingerprint(black))!
+    const result = await verifyProof(photoSpec, photoPayload, [nearlyIdentical], [seen], 'photo the shop')
+
+    expect(result.checks.find(c => c.name.startsWith('dedup_'))?.passed).toBe(true)
+    expect(result.outcome).not.toBe('failed')
+  })
+
   it('passes a visually different image', async () => {
     const { black, checker } = await images()
-    const seen = (await proofPerceptualHash(black))!
+    const seen = (await proofFingerprint(black))!
 
     const result = await verifyProof(photoSpec, photoPayload, [checker], [seen], 'photo the shop')
-    const dedup = result.checks.find(c => c.name.startsWith('dedup_'))
-    expect(dedup?.passed).toBe(true)
+    expect(result.checks.find(c => c.name.startsWith('dedup_'))?.passed).toBe(true)
   })
 
   it('passes when nothing has been submitted recently', async () => {
@@ -84,11 +118,11 @@ describe('duplicate detection', () => {
     expect(result.checks.find(c => c.name.startsWith('dedup_'))?.passed).toBe(true)
   })
 
-  it('does not fail a proof merely because the stored hash is the wrong format', async () => {
-    // Defensive: a legacy SHA-256 row must not crash or false-positive.
+  it('tolerates legacy rows that carry no digest', async () => {
+    // Rows written before the digest existed must not crash or false-positive.
     const { black } = await images()
-    const legacyHex = 'a'.repeat(64)
-    const result = await verifyProof(photoSpec, photoPayload, [black], [legacyHex], 'photo the shop')
+    const legacy = { phash: 'a'.repeat(64), sha256: '' }
+    const result = await verifyProof(photoSpec, photoPayload, [black], [legacy], 'photo the shop')
     expect(result.checks.find(c => c.name.startsWith('dedup_'))?.passed).toBe(true)
   })
 })
