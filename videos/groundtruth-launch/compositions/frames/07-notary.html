@@ -1,0 +1,663 @@
+<template>
+  <style>
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    /* ── Fonts ─────────────────────────────────────────────────────────────
+       JetBrains Mono is the project's index/code voice (frame.md). No WOFF2
+       ships in assets/fonts or capture/assets/fonts, so the face is declared
+       from local() only — never a network @import — and every stack falls
+       back to a generic monospace so the render is deterministic offline. */
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 400;
+      color: #edf2f7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layer 0 · full-bleed ground + cyan dot grid ───────────────────── */
+    .nt07-ground {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+      background-image: radial-gradient(circle, rgba(13, 204, 255, 0.1) 1.6px, transparent 1.6px);
+      background-size: 48px 48px;
+      background-position: 0 0;
+    }
+
+    /* ── Layer 1 · the real mission board, dimmed + blurred ────────────── */
+    .nt07-board {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      object-fit: cover;
+      object-position: center top;
+      filter: blur(9px) saturate(0.86);
+      opacity: 0;
+      transform-origin: 52% 44%;
+    }
+
+    /* ── Layer 2 · legibility scrim ────────────────────────────────────── */
+    .nt07-scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(120% 90% at 26% 44%, rgba(4, 6, 10, 0.28) 0%, rgba(4, 6, 10, 0.66) 58%, rgba(4, 6, 10, 0.82) 100%);
+    }
+
+    /* ── Layer 3 · the proof card (hairline plate, no shadow) ──────────── */
+    .nt07-card {
+      position: absolute;
+      left: 96px;
+      top: 150px;
+      width: 764px;
+      height: 640px;
+      background: #0c1420;
+      border: 1px solid #1c2a3a;
+      border-radius: 12px;
+      box-shadow: none;
+      overflow: hidden;
+    }
+    .nt07-card-chrome {
+      position: absolute;
+      left: 28px;
+      top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #3a5269;
+      white-space: nowrap;
+    }
+    .nt07-chrome-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 9999px;
+      background: #274056;
+    }
+    .nt07-shop {
+      position: absolute;
+      left: 62px;
+      top: 64px;
+      width: 640px;
+      height: 400px;
+      overflow: visible;
+    }
+    .nt07-draw {
+      fill: none;
+      stroke: #3a5269;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .nt07-draw-faint {
+      stroke: #274056;
+      stroke-width: 2;
+    }
+    .nt07-body {
+      fill: #0a1119;
+    }
+    .nt07-win {
+      fill: #edf2f7;
+      fill-opacity: 0;
+    }
+    .nt07-sign-plate {
+      fill: #0a1119;
+      stroke: #274056;
+      stroke-width: 1.6;
+    }
+    .nt07-sign-word {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      fill: #edf2f7;
+    }
+
+    /* the white note at the shopfront's foot */
+    .nt07-note {
+      position: absolute;
+      left: 222px;
+      top: 478px;
+      width: 320px;
+      height: 98px;
+      background: #f2f5f8;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      opacity: 0;
+    }
+    .nt07-note-rule {
+      width: 210px;
+      height: 1px;
+      background: #c6d2dc;
+    }
+    .nt07-note-code {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #0a1119;
+      opacity: 0;
+    }
+
+    /* ── Layer 4 · the right column ────────────────────────────────────── */
+    .nt07-right {
+      position: absolute;
+      inset: 0;
+    }
+    .nt07-bloom-cyan {
+      position: absolute;
+      left: 882px;
+      top: 89px;
+      width: 660px;
+      height: 440px;
+      border-radius: 9999px;
+      background: radial-gradient(closest-side, rgba(13, 204, 255, 0.34), rgba(13, 204, 255, 0.08) 58%, rgba(13, 204, 255, 0) 72%);
+      opacity: 0;
+    }
+    .nt07-token {
+      position: absolute;
+      left: 1000px;
+      top: 250px;
+      font-size: 118px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0;
+      color: #0dccff;
+      white-space: nowrap;
+      opacity: 0;
+    }
+    .nt07-label {
+      position: absolute;
+      left: 1000px;
+      top: 404px;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+      white-space: pre;
+    }
+    .nt07-ch {
+      display: inline-block;
+      opacity: 0;
+    }
+    .nt07-verdict-chrome {
+      position: absolute;
+      left: 1000px;
+      top: 496px;
+      width: 620px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #3a5269;
+      opacity: 0;
+    }
+    .nt07-rule {
+      flex: 1;
+      height: 1px;
+      background: #1c2a3a;
+      transform-origin: left center;
+    }
+    .nt07-bloom-green {
+      position: absolute;
+      left: 936px;
+      top: 442px;
+      width: 640px;
+      height: 280px;
+      background: radial-gradient(closest-side, rgba(0, 232, 122, 0.26), rgba(0, 232, 122, 0.06) 56%, rgba(0, 232, 122, 0) 72%);
+      opacity: 0;
+    }
+    .nt07-tick {
+      position: absolute;
+      left: 1000px;
+      top: 543px;
+      width: 46px;
+      height: 46px;
+    }
+    .nt07-tick path {
+      fill: none;
+      stroke: #00e87a;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .nt07-accept {
+      position: absolute;
+      left: 1064px;
+      top: 528px;
+      font-size: 76px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      color: #00e87a;
+      opacity: 0;
+    }
+    .nt07-sentence {
+      position: absolute;
+      left: 1000px;
+      top: 648px;
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.2;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ── Layer 5 · the hairline connector ──────────────────────────────── */
+    .nt07-wires {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .nt07-wires path {
+      fill: none;
+      stroke: #274056;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+    }
+    .nt07-node {
+      fill: #3a5269;
+      opacity: 0;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="07-notary"
+    data-start="0"
+    data-duration="5.712"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- 0 · full-bleed ground + dot grid (its own clip layer, never on #root) -->
+    <div
+      class="clip nt07-ground"
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="0"
+    ></div>
+
+    <!-- 1 · the real mission board, background role: dimmed ~30%, blurred -->
+    <img
+      class="clip nt07-board"
+      src="assets/board-dark.png"
+      alt=""
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="1"
+    />
+
+    <!-- 2 · scrim -->
+    <div
+      class="clip nt07-scrim"
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="2"
+    ></div>
+
+    <!-- 3 · the proof card -->
+    <div
+      class="clip nt07-card"
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="3"
+    >
+      <div class="nt07-card-chrome">
+        <span class="nt07-chrome-dot"></span><span>proof photo</span>
+      </div>
+
+      <svg class="nt07-shop" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">
+        <rect class="nt07-body" x="80" y="112" width="480" height="228" rx="2" />
+
+        <!-- lit windows: fill blooms on after the outlines draw -->
+        <rect class="nt07-win" x="104" y="240" width="148" height="78" rx="3" />
+        <rect class="nt07-win" x="388" y="240" width="148" height="78" rx="3" />
+
+        <path class="nt07-draw nt07-draw-faint" id="nt07-base" d="M 34 340 L 606 340" />
+        <path class="nt07-draw" id="nt07-walls" d="M 80 340 L 80 112 L 560 112 L 560 340" />
+        <path
+          class="nt07-draw"
+          id="nt07-roof"
+          d="M 80 172 L 560 172 M 56 216 L 96 176 L 544 176 L 584 216 L 56 216"
+        />
+        <path class="nt07-draw" id="nt07-door" d="M 286 340 L 286 236 L 354 236 L 354 340" />
+        <path
+          class="nt07-draw nt07-draw-faint"
+          id="nt07-winl"
+          d="M 104 318 L 104 240 L 252 240 L 252 318 M 178 240 L 178 318"
+        />
+        <path
+          class="nt07-draw nt07-draw-faint"
+          id="nt07-winr"
+          d="M 388 318 L 388 240 L 536 240 L 536 318"
+        />
+
+        <g class="nt07-sign">
+          <rect class="nt07-sign-plate" x="402" y="254" width="124" height="46" rx="4" />
+          <text class="nt07-sign-word" x="466" y="285" text-anchor="middle">OPEN</text>
+        </g>
+      </svg>
+
+      <div class="nt07-note">
+        <div class="nt07-note-rule"></div>
+        <div class="nt07-note-code">RR86NF</div>
+        <div class="nt07-note-rule"></div>
+      </div>
+    </div>
+
+    <!-- 4 · the lifted token, its label, and the verdict -->
+    <div
+      class="clip nt07-right"
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="4"
+    >
+      <div class="nt07-bloom-cyan"></div>
+      <div class="nt07-token">RR86NF</div>
+
+      <div class="nt07-label"><span class="nt07-ch">f</span><span class="nt07-ch">r</span><span
+          class="nt07-ch"
+        >e</span><span class="nt07-ch">s</span><span class="nt07-ch">h</span><span
+          class="nt07-ch"
+        >n</span><span class="nt07-ch">e</span><span class="nt07-ch">s</span><span
+          class="nt07-ch"
+        >s</span><span class="nt07-ch">&nbsp;</span><span class="nt07-ch">c</span><span
+          class="nt07-ch"
+        >o</span><span class="nt07-ch">d</span><span class="nt07-ch">e</span><span
+          class="nt07-ch"
+        >&nbsp;</span><span class="nt07-ch">·</span><span class="nt07-ch">&nbsp;</span><span
+          class="nt07-ch"
+        >p</span><span class="nt07-ch">e</span><span class="nt07-ch">r</span><span
+          class="nt07-ch"
+        >&nbsp;</span><span class="nt07-ch">t</span><span class="nt07-ch">a</span><span
+          class="nt07-ch"
+        >s</span><span class="nt07-ch">k</span></div>
+
+      <div class="nt07-verdict-chrome">
+        <span>notary</span><span class="nt07-rule"></span>
+      </div>
+
+      <div class="nt07-bloom-green"></div>
+
+      <svg class="nt07-tick" viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg">
+        <path class="nt07-draw-tick" d="M 8 25 L 19 36 L 39 10" />
+      </svg>
+      <div class="nt07-accept">accept</div>
+
+      <div class="nt07-sentence">required code 'RR86NF' clearly visible</div>
+    </div>
+
+    <!-- 5 · the hairline connector, token → its origin on the card -->
+    <svg
+      class="clip nt07-wires"
+      viewBox="0 0 1920 1080"
+      xmlns="http://www.w3.org/2000/svg"
+      data-start="0"
+      data-duration="5.712"
+      data-track-index="5"
+    >
+      <path class="nt07-wire" d="M 1004 386 C 906 468, 806 562, 610 634" />
+      <circle class="nt07-node" cx="1004" cy="386" r="4.5" />
+      <circle class="nt07-node" cx="610" cy="634" r="4.5" />
+    </svg>
+  </div>
+
+  <script>
+    (function () {
+      var root =
+        document.querySelector('[data-composition-id="07-notary"]') || document;
+      var q = function (sel) {
+        return root.querySelector(sel);
+      };
+      var qa = function (sel) {
+        return Array.prototype.slice.call(root.querySelectorAll(sel));
+      };
+
+      // ── svg-path-draw setup: measured geometry, never a magic number ────
+      var strokes = qa(".nt07-draw").concat(qa(".nt07-wire"), qa(".nt07-draw-tick"));
+      strokes.forEach(function (p) {
+        var len = 0;
+        try {
+          len = p.getTotalLength();
+        } catch (e) {
+          len = 0;
+        }
+        if (!len || !isFinite(len)) len = 600;
+        len = len * 1.02;
+        p.style.strokeDasharray = String(len);
+        p.style.strokeDashoffset = String(len);
+      });
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ── Scene 1 (0.0–1.2s) — the board sits behind; the proof card slides
+            up 28px into the left 55% and settles; the shopfront draws on. ── */
+      tl.fromTo(
+        q(".nt07-board"),
+        { opacity: 0 },
+        { opacity: 0.3, duration: 0.62, ease: "power1.out" },
+        0,
+      );
+      // macro camera: a slow push across the whole shot
+      tl.fromTo(
+        q(".nt07-board"),
+        { scale: 1.06 },
+        { scale: 1.14, duration: 5.312, ease: "none" },
+        0,
+      );
+
+      tl.fromTo(
+        q(".nt07-card"),
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.72, ease: "power3.out" },
+        0.06,
+      );
+      tl.fromTo(
+        q(".nt07-card-chrome"),
+        { x: -8, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.4, ease: "power2.out" },
+        0.2,
+      );
+
+      // the shopfront traces on, segment after segment
+      tl.to(q("#nt07-base"), { strokeDashoffset: 0, duration: 0.44, ease: "power2.out" }, 0.28);
+      tl.to(q("#nt07-walls"), { strokeDashoffset: 0, duration: 0.52, ease: "power2.out" }, 0.36);
+      tl.to(q("#nt07-roof"), { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 0.55);
+      tl.to(q("#nt07-door"), { strokeDashoffset: 0, duration: 0.34, ease: "power2.out" }, 0.72);
+      tl.to(q("#nt07-winl"), { strokeDashoffset: 0, duration: 0.32, ease: "power2.out" }, 0.78);
+      tl.to(q("#nt07-winr"), { strokeDashoffset: 0, duration: 0.32, ease: "power2.out" }, 0.84);
+
+      // the two windows light up, then the OPEN sign
+      tl.to(qa(".nt07-win"), { fillOpacity: 0.13, duration: 0.36, ease: "power1.out" }, 1.0);
+      tl.fromTo(
+        q(".nt07-sign"),
+        { opacity: 0, scale: 0.94, transformOrigin: "466px 277px" },
+        { opacity: 1, scale: 1, duration: 0.34, ease: "power2.out" },
+        1.04,
+      );
+
+      // the note lands at the shopfront's foot, carrying the code
+      tl.fromTo(
+        q(".nt07-note"),
+        { y: 18, scale: 0.94, rotation: -6, opacity: 0, transformOrigin: "50% 50%" },
+        { y: 0, scale: 1, rotation: -1.6, opacity: 1, duration: 0.5, ease: "power3.out" },
+        0.86,
+      );
+      tl.fromTo(
+        q(".nt07-note-code"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power1.out" },
+        1.04,
+      );
+
+      /* ── Scene 2 (1.2–2.4s) — "Every task carries a code": the code lifts
+            OUT of the card, duplicating up and right into the empty 45%,
+            scaling up, landing as a large cyan token + one glow bloom. ──── */
+      // card-morph-anchor: the in-card code registers, then the duplicate lifts
+      tl.to(
+        q(".nt07-note-code"),
+        { scale: 1.07, duration: 0.16, ease: "power2.out", transformOrigin: "50% 50%" },
+        1.2,
+      );
+      tl.to(
+        q(".nt07-note-code"),
+        { scale: 1, duration: 0.24, ease: "power2.inOut" },
+        1.36,
+      );
+
+      // one tween carries apparent size (uniform scale), position and paint
+      tl.fromTo(
+        q(".nt07-token"),
+        {
+          x: -734,
+          y: 368,
+          scale: 0.288,
+          color: "#edf2f7",
+          transformOrigin: "50% 50%",
+        },
+        {
+          x: 0,
+          y: 0,
+          scale: 1,
+          color: "#0dccff",
+          duration: 0.86,
+          ease: "power3.out",
+        },
+        1.28,
+      );
+      tl.fromTo(
+        q(".nt07-token"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.18, ease: "power1.out" },
+        1.28,
+      );
+
+      // the single glow bloom — it blooms on landing and decays
+      tl.fromTo(
+        q(".nt07-bloom-cyan"),
+        { opacity: 0, scale: 0.72, transformOrigin: "50% 50%" },
+        { opacity: 1, scale: 1.06, duration: 0.24, ease: "power2.out" },
+        2.02,
+      );
+      tl.to(
+        q(".nt07-bloom-cyan"),
+        { opacity: 0.16, scale: 1, duration: 0.66, ease: "power2.out" },
+        2.26,
+      );
+
+      /* ── Scene 3 (2.4–3.7s) — "The proof has to show it": a hairline
+            connector draws from the token back to its origin on the card,
+            and the mono label types on beside it. ───────────────────────── */
+      tl.fromTo(
+        qa(".nt07-node")[0],
+        { opacity: 0 },
+        { opacity: 1, duration: 0.2, ease: "power1.out" },
+        2.42,
+      );
+      tl.to(
+        q(".nt07-wire"),
+        { strokeDashoffset: 0, duration: 0.68, ease: "power2.out" },
+        2.46,
+      );
+      tl.fromTo(
+        qa(".nt07-node")[1],
+        { opacity: 0 },
+        { opacity: 1, duration: 0.2, ease: "power1.out" },
+        3.06,
+      );
+
+      tl.fromTo(
+        qa(".nt07-ch"),
+        { opacity: 0, y: 6 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.14,
+          ease: "power1.out",
+          stagger: 0.018,
+        },
+        3.02,
+      );
+
+      /* ── Scene 4 (3.7–5.312s) — "so a stock photo can't pass": the verdict
+            resolves. A tick draws on, then `accept` — the first green in the
+            film — and beneath it the real notary sentence. Then HOLD. ───── */
+      tl.fromTo(
+        q(".nt07-verdict-chrome"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: "power1.out" },
+        3.72,
+      );
+      tl.fromTo(
+        q(".nt07-rule"),
+        { scaleX: 0 },
+        { scaleX: 1, duration: 0.5, ease: "power2.out" },
+        3.72,
+      );
+
+      tl.to(
+        q(".nt07-draw-tick"),
+        { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" },
+        3.86,
+      );
+
+      tl.fromTo(
+        q(".nt07-accept"),
+        { opacity: 0, y: 10, scale: 0.93, transformOrigin: "0% 50%" },
+        { opacity: 1, y: 0, scale: 1, duration: 0.52, ease: "power3.out" },
+        4.14,
+      );
+      tl.fromTo(
+        q(".nt07-bloom-green"),
+        { opacity: 0 },
+        { opacity: 0.9, duration: 0.26, ease: "power2.out" },
+        4.2,
+      );
+      tl.to(
+        q(".nt07-bloom-green"),
+        { opacity: 0.16, duration: 0.7, ease: "power2.out" },
+        4.48,
+      );
+
+      tl.fromTo(
+        q(".nt07-sentence"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        4.62,
+      );
+      // 5.12 → 5.312: HOLD
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["07-notary"] = tl;
+    })();
+  </script>
+</template>

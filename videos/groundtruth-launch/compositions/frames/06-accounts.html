@@ -1,0 +1,528 @@
+<template>
+  <style>
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    /* 06-accounts — a CONTINUATION frame. It opens on Frame 5's landed state
+       (three 260x88 chips centred on y=520 at x 420/960/1500, the 1px rail
+       x300→1620 at y520.5, the cyan value dot parked at chip 3) and lands on
+       Frame 6b's held state (the same chips grown to 260x148, real 0.0.x ids,
+       both amounts on the rail, the explorer line). Nothing enters at t=0.
+
+       Mono voice is set with CSS generic families only: no font file ships with
+       this project (assets/fonts is absent, capture/extracted/fonts-manifest.json
+       lists zero families), so naming a family would silently fall back in the
+       headless render. */
+
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── full-bleed ground: its own clip layer, never a background on #root ── */
+    .f06a-ground {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      background-color: #04060a;
+    }
+    .f06a-grid {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      background-position: 0 0;
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.1) 1.5px,
+        rgba(13, 204, 255, 0) 1.6px
+      );
+      background-size: 48px 48px;
+    }
+
+    /* ── the station chips (they GROW; they never enter) ── */
+    .f06a-chip {
+      position: absolute;
+      top: 476px;
+      width: 260px;
+      height: 88px;
+      background-color: rgba(12, 20, 32, 0);
+      border: 1px solid #1c2a3a;
+      border-radius: 8px;
+      transform-origin: 50% 50%;
+    }
+    #f06a-c1 {
+      left: 290px;
+    }
+    #f06a-c2 {
+      left: 830px;
+    }
+    #f06a-c3 {
+      left: 1370px;
+    }
+
+    /* Frame 5's accent ring — it resolves away as the chip becomes a card */
+    .f06a-ring {
+      position: absolute;
+      left: -1px;
+      top: -1px;
+      right: -1px;
+      bottom: -1px;
+      border: 1px solid #0dccff;
+      border-radius: 8px;
+      opacity: 0;
+    }
+
+    /* outgoing label — exactly Frame 5's chip label */
+    .f06a-label-out {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 29px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+      white-space: nowrap;
+      transform-origin: 50% 50%;
+    }
+
+    /* incoming label — the indexical station name above the real id */
+    .f06a-label-in {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 21px;
+      height: 18px;
+      line-height: 18px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+      transform-origin: 50% 50%;
+    }
+
+    /* the real account id */
+    .f06a-id {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 97px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* station 3 opens ACTIVE — this is Frame 5's landed end state */
+    #f06a-c3 .f06a-ring {
+      opacity: 1;
+    }
+    #f06a-c3 .f06a-label-out,
+    #f06a-c3 .f06a-label-in {
+      color: #0dccff;
+    }
+    #f06a-c3 .f06a-id {
+      color: #edf2f7;
+    }
+
+    /* ── the rail, drawn over the chips once the labels lift clear ── */
+    .f06a-rail-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+    }
+    .f06a-rail-svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: visible;
+    }
+    .f06a-rail-path {
+      fill: none;
+      stroke: #1c2a3a;
+      stroke-width: 1;
+      stroke-linecap: butt;
+    }
+
+    /* ── amounts sitting on the rail, breaking it in the chip gaps ── */
+    .f06a-amount {
+      position: absolute;
+      top: 505px;
+      width: 240px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+    }
+    .f06a-amount span {
+      background-color: #04060a;
+      padding: 0 16px;
+    }
+    .f06a-amount b {
+      font-weight: 600;
+      color: #edf2f7;
+    }
+    #f06a-amt1 {
+      left: 570px;
+    }
+    #f06a-amt2 {
+      left: 1110px;
+    }
+
+    .f06a-fee {
+      position: absolute;
+      left: 1110px;
+      top: 546px;
+      width: 240px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      color: #3a5269;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ── explorer chrome ── */
+    .f06a-source {
+      position: absolute;
+      left: 0;
+      top: 686px;
+      width: 1920px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ── the value dot, landed at chip 3's centre — motionless all frame ── */
+    .f06a-dot-glow {
+      position: absolute;
+      left: 1478px;
+      top: 498px;
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.45) 0%,
+        rgba(13, 204, 255, 0) 68%
+      );
+      opacity: 0.42;
+    }
+    .f06a-dot {
+      position: absolute;
+      left: 1494px;
+      top: 514px;
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background-color: #0dccff;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="06-accounts"
+    data-start="0"
+    data-duration="5.5"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- 0 · ground -->
+    <div class="clip f06a-ground" data-start="0" data-duration="5.5" data-track-index="0">
+      <div class="f06a-grid"></div>
+    </div>
+
+    <!-- 1 · the three stations, already in place -->
+    <div
+      id="f06a-c1"
+      class="clip f06a-chip"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="1"
+    >
+      <div class="f06a-ring"></div>
+      <div class="f06a-label-out">agent</div>
+      <div class="f06a-label-in">Agent</div>
+      <div class="f06a-id">0.0.9847870</div>
+    </div>
+
+    <div
+      id="f06a-c2"
+      class="clip f06a-chip"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="2"
+    >
+      <div class="f06a-ring"></div>
+      <div class="f06a-label-out">treasury</div>
+      <div class="f06a-label-in">Treasury</div>
+      <div class="f06a-id">0.0.9847867</div>
+    </div>
+
+    <div
+      id="f06a-c3"
+      class="clip f06a-chip"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="3"
+    >
+      <div class="f06a-ring"></div>
+      <div class="f06a-label-out">oracle</div>
+      <div class="f06a-label-in">Oracle</div>
+      <div class="f06a-id">0.0.9860142</div>
+    </div>
+
+    <!-- 2 · the rail — cut behind the labels exactly as Frame 5 left it -->
+    <div
+      class="clip f06a-rail-layer"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="4"
+    >
+      <svg class="f06a-rail-svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <mask
+            id="f06a-rail-mask"
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="1920"
+            height="1080"
+          >
+            <rect x="0" y="0" width="1920" height="1080" fill="#ffffff" />
+            <rect class="f06a-cut" x="336" y="498" width="168" height="44" rx="10" fill="#000000" />
+            <rect class="f06a-cut" x="876" y="498" width="168" height="44" rx="10" fill="#000000" />
+            <rect class="f06a-cut" x="1416" y="498" width="168" height="44" rx="10" fill="#000000" />
+          </mask>
+        </defs>
+        <g mask="url(#f06a-rail-mask)">
+          <path class="f06a-rail-path" d="M 300 520.5 L 1620 520.5" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- 3 · the amounts moving along the rail -->
+    <div
+      id="f06a-amt1"
+      class="clip f06a-amount"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="5"
+    >
+      <span><b>0.50</b> USDC</span>
+    </div>
+
+    <div
+      id="f06a-amt2"
+      class="clip f06a-amount"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="6"
+    >
+      <span><b>0.44</b> USDC</span>
+    </div>
+
+    <div
+      id="f06a-fee"
+      class="clip f06a-fee"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="7"
+    >
+      &#8722;12% fee
+    </div>
+
+    <!-- 4 · every hop is openable -->
+    <div
+      id="f06a-source"
+      class="clip f06a-source"
+      data-start="0"
+      data-duration="5.5"
+      data-track-index="8"
+    >
+      hashscan.io/testnet
+    </div>
+
+    <!-- 5 · the value dot, parked at station 3 -->
+    <div class="clip f06a-dot-glow" data-start="0" data-duration="5.5" data-track-index="9"></div>
+    <div class="clip f06a-dot" data-start="0" data-duration="5.5" data-track-index="10"></div>
+  </div>
+
+  <script>
+    (function () {
+      var FRAME_ID = "06-accounts";
+      var scope =
+        document.querySelector('[data-composition-id="' + FRAME_ID + '"]') || document;
+
+      function one(sel) {
+        return scope.querySelector(sel);
+      }
+      function all(sel) {
+        return scope.querySelectorAll(sel);
+      }
+
+      var CY = "#0dccff";
+      var INK = "#edf2f7";
+      var MUTED = "#7a9ab5";
+
+      var chips = [one("#f06a-c1"), one("#f06a-c2"), one("#f06a-c3")];
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* =====================================================================
+         Scene 1 (0.0–1.2s) — "Three real accounts."
+         The three stations are already landed. Each chip GROWS about the rail
+         88 -> 148 (height only) and the abstraction resolves into the real id:
+         scale-swap-transition on the label (outgoing shrinks + fades fast,
+         incoming pops in with weight), then the inner content — the 0.0.x id —
+         reveals once the container has settled.
+         ===================================================================== */
+      tl.to(
+        all(".f06a-chip"),
+        {
+          y: -30,
+          height: 148,
+          borderRadius: 12,
+          backgroundColor: "#0c1420",
+          duration: 0.52,
+          ease: "back.out(1.2)",
+          stagger: 0.07,
+        },
+        0.1,
+      );
+
+      // outgoing: Frame 5's label rushes away
+      tl.to(
+        all(".f06a-label-out"),
+        { scale: 0.72, opacity: 0, duration: 0.34, ease: "power2.in", stagger: 0.07 },
+        0.18,
+      );
+
+      // incoming: the station name arrives with weight, above where the id will sit
+      tl.fromTo(
+        all(".f06a-label-in"),
+        { scale: 0.72, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)", stagger: 0.07 },
+        0.38,
+      );
+
+      // the accent ring resolves away — from here the accent lives in the type
+      tl.to(one("#f06a-c3 .f06a-ring"), { opacity: 0, duration: 0.4, ease: "power2.out" }, 0.24);
+
+      // the rail completes through the stations as the labels lift clear of it
+      tl.to(all(".f06a-cut"), { opacity: 0, duration: 0.5, ease: "power2.out" }, 0.34);
+
+      // inner content, after the containers settle: the real account ids
+      tl.fromTo(
+        all(".f06a-id"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.44, ease: "power3.out", stagger: 0.07 },
+        0.86,
+      );
+
+      /* ---- the accent steps station to station, only ever one cyan chip ---- */
+      function accentOn(i, t) {
+        tl.to(chips[i].querySelector(".f06a-label-in"), { color: CY, duration: 0.3, ease: "power2.out" }, t);
+        tl.to(chips[i].querySelector(".f06a-id"), { color: INK, duration: 0.3, ease: "power2.out" }, t);
+        tl.to(chips[i], { scale: 1.022, duration: 0.16, ease: "power2.out" }, t);
+        tl.to(chips[i], { scale: 1, duration: 0.34, ease: "power2.out" }, t + 0.16);
+      }
+      function accentOff(i, t) {
+        tl.to(chips[i].querySelector(".f06a-label-in"), { color: MUTED, duration: 0.3, ease: "power2.out" }, t);
+        tl.to(chips[i].querySelector(".f06a-id"), { color: MUTED, duration: 0.3, ease: "power2.out" }, t);
+      }
+
+      /* Scene 2 (1.2–2.4s) — "Agent," : the accent steps to the left station. */
+      accentOff(2, 1.28);
+      accentOn(0, 1.34);
+
+      /* Scene 3 (2.4–3.2s) — "treasury," : accent steps to the centre station and
+         the amount leaving the agent lands on the rail between chip 1 and 2. */
+      accentOff(0, 2.44);
+      accentOn(1, 2.5);
+      tl.fromTo(
+        one("#f06a-amt1"),
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.44, ease: "power3.out" },
+        2.58,
+      );
+
+      /* Scene 4 (3.2–4.3s) — "oracle," : accent steps to the right station, the
+         settled amount lands between chip 2 and 3, the fee reads beneath it. */
+      accentOff(1, 3.28);
+      accentOn(2, 3.34);
+      // chip 3 is the terminal active station and stays lit through the hold, so
+      // its id resolves all the way to the accent — this is the exact state 6b
+      // opens on (label + id both #0dccff), keeping the cut invisible.
+      tl.to(chips[2].querySelector(".f06a-id"), { color: CY, duration: 0.3, ease: "power2.out" }, 3.34);
+      tl.fromTo(
+        one("#f06a-amt2"),
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.44, ease: "power3.out" },
+        3.44,
+      );
+      tl.fromTo(
+        one("#f06a-fee"),
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" },
+        3.76,
+      );
+
+      /* Scene 5 (4.3–5.5s) — "You can open every hop yourself."
+         The explorer line fades up under the whole rail. Then HOLD, everything
+         still, on exactly the state Frame 6b resumes from. */
+      tl.fromTo(
+        one("#f06a-source"),
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" },
+        4.42,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines[FRAME_ID] = tl;
+    })();
+  </script>
+</template>

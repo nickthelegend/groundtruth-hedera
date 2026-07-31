@@ -1,0 +1,431 @@
+<template>
+  <style>
+    /* ---- fonts (project-root relative; JetBrains Mono is the frame's only face) ---- */
+    @font-face {
+      font-family: "JetBrains Mono";
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+      src:
+        url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"),
+        local("JetBrains Mono");
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+      src:
+        url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"),
+        local("JetBrains Mono Bold");
+    }
+
+    /* ---- root (styled by #root, never by a class) ---- */
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "JetBrains Mono", monospace;
+      font-kerning: none;
+      font-variant-ligatures: none;
+    }
+
+    /* ---- layer 1 · full-bleed ground + cyan dot grid ---- */
+    .f03t-bg {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+    }
+    .f03t-grid {
+      position: absolute;
+      inset: -5%;
+      background-image: radial-gradient(rgba(13, 204, 255, 0.1) 1.5px, rgba(13, 204, 255, 0) 1.6px);
+      background-size: 46px 46px;
+      background-position: 0 0;
+    }
+    .f03t-vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(
+          120% 92% at 50% 43%,
+          rgba(13, 204, 255, 0.05) 0%,
+          rgba(4, 6, 10, 0) 56%
+        ),
+        radial-gradient(135% 100% at 50% 50%, rgba(4, 6, 10, 0) 38%, #04060a 100%);
+    }
+
+    /* ---- chrome · mono kicker + hairline section rule ---- */
+    .f03t-kicker {
+      position: absolute;
+      left: 300px;
+      top: 166px;
+      width: 1320px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+    }
+    .f03t-kicker-text {
+      font-size: 26px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #3a5269;
+      white-space: nowrap;
+    }
+    .f03t-rule {
+      height: 1px;
+      flex: 1 1 auto;
+      background: #1c2a3a;
+      transform-origin: left center;
+    }
+
+    /* ---- layer 2 · the code surface (hairline, no shadow) ---- */
+    .f03t-panel {
+      position: absolute;
+      left: 300px;
+      top: 250px;
+      width: 1320px;
+      background: #0a1119;
+      border: 1px solid #1c2a3a;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: none;
+    }
+    .f03t-bar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: #111c2b;
+      border-bottom: 1px solid #1c2a3a;
+    }
+    .f03t-bar-label {
+      font-size: 24px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #3a5269;
+    }
+    .f03t-body {
+      padding: 52px 56px;
+    }
+
+    /* ---- layer 3 · the request line ---- */
+    .f03t-req {
+      display: flex;
+      align-items: baseline;
+      font-size: 48px;
+      line-height: 1.3;
+    }
+    .f03t-arrow {
+      color: #3a5269;
+      margin-right: 22px;
+    }
+    .f03t-wrap {
+      display: inline-flex;
+      align-items: baseline;
+      min-width: 640px;
+      white-space: pre;
+    }
+    .f03t-method {
+      color: #edf2f7;
+    }
+    .f03t-path {
+      color: #0dccff;
+    }
+    .f03t-caret {
+      display: inline-block;
+      width: 16px;
+      height: 40px;
+      margin-left: 6px;
+      position: relative;
+      top: 6px;
+      background: #edf2f7;
+    }
+
+    /* ---- layer 3 · the response line ---- */
+    .f03t-resp {
+      display: flex;
+      align-items: baseline;
+      margin-top: 40px;
+    }
+    .f03t-proto {
+      font-size: 48px;
+      font-weight: 400;
+      line-height: 1.15;
+      color: #7a9ab5;
+    }
+    .f03t-codewrap {
+      position: relative;
+      display: inline-block;
+      margin: 0 24px;
+    }
+    .f03t-code {
+      display: inline-block;
+      font-size: 96px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: #0dccff;
+    }
+    .f03t-bloom::before {
+      content: "402";
+    }
+    .f03t-bloom {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 96px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: #0dccff;
+      filter: blur(20px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .f03t-phrase {
+      font-size: 48px;
+      font-weight: 400;
+      line-height: 1.15;
+      color: #edf2f7;
+    }
+
+    /* ---- status strip ---- */
+    .f03t-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      padding: 0 32px;
+      background: #0c1420;
+      border-top: 1px solid #1c2a3a;
+    }
+    .f03t-status-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .f03t-status-label {
+      font-size: 24px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #3a5269;
+    }
+    .f03t-status-val {
+      font-size: 24px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+    }
+  </style>
+
+  <div id="root" data-composition-id="03-the-call" data-duration="4.809" data-width="1920" data-height="1080">
+    <!-- track 0 — full-bleed ground on its own clip layer -->
+    <div
+      class="clip f03t-bg"
+      data-start="0"
+      data-duration="4.809"
+      data-track-index="0"
+    >
+      <div class="f03t-grid"></div>
+      <div class="f03t-vignette"></div>
+    </div>
+
+    <!-- track 1 — mono chrome -->
+    <div
+      class="clip f03t-kicker"
+      data-start="0"
+      data-duration="4.809"
+      data-track-index="1"
+    >
+      <span class="f03t-kicker-text">Agent call</span>
+      <div class="f03t-rule"></div>
+    </div>
+
+    <!-- track 2 — the code surface -->
+    <div
+      class="clip f03t-panel"
+      data-start="0"
+      data-duration="4.809"
+      data-track-index="2"
+    >
+      <div class="f03t-bar">
+        <span class="f03t-bar-label">request.http</span>
+        <span class="f03t-bar-label">api.groundtruth</span>
+      </div>
+
+      <div class="f03t-body">
+        <div class="f03t-req">
+          <span class="f03t-arrow">&#8594;</span>
+          <span class="f03t-wrap"
+            ><span class="f03t-method"></span><span class="f03t-path"></span
+            ><span class="f03t-caret"></span
+          ></span>
+        </div>
+
+        <div class="f03t-resp">
+          <span class="f03t-proto">HTTP/1.1</span>
+          <span class="f03t-codewrap">
+            <span class="f03t-bloom" aria-hidden="true"></span>
+            <span class="f03t-code">402</span>
+          </span>
+          <span class="f03t-phrase">Payment Required</span>
+        </div>
+      </div>
+
+      <div class="f03t-status">
+        <div class="f03t-status-left">
+          <span class="f03t-status-label">status</span>
+          <span class="f03t-status-val">awaiting</span>
+        </div>
+        <span class="f03t-status-label">mcp &#183; tool call</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var D = 4.309;
+      var root = document.querySelector('[data-composition-id="03-the-call"]') || document;
+      var q = function (sel) {
+        return root.querySelector(sel);
+      };
+
+      var grid = q(".f03t-grid");
+      var kickerText = q(".f03t-kicker-text");
+      var rule = q(".f03t-rule");
+      var panel = q(".f03t-panel");
+      var methodEl = q(".f03t-method");
+      var pathEl = q(".f03t-path");
+      var caret = q(".f03t-caret");
+      var arrow = q(".f03t-arrow");
+      var proto = q(".f03t-proto");
+      var code = q(".f03t-code");
+      var bloom = q(".f03t-bloom");
+      var phrase = q(".f03t-phrase");
+      var statusVal = q(".f03t-status-val");
+
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* ---------- Scene 1 (0.0–1.4s) — surface slides up 32px, request types on ---------- */
+
+      // ground: a slow settle under everything (macro camera move)
+      tl.fromTo(grid, { opacity: 0, scale: 1.03 }, { opacity: 1, scale: 1, duration: 2.0, ease: "power2.out" }, 0);
+
+      // mono chrome
+      tl.fromTo(kickerText, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 0.12);
+      tl.fromTo(rule, { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: "power3.out" }, 0.2);
+
+      // the code surface — slides up 32px and settles
+      tl.fromTo(panel, { y: 32, opacity: 0 }, { y: 0, opacity: 1, duration: 0.58, ease: "power3.out" }, 0);
+      tl.fromTo(arrow, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 0.3);
+
+      // discrete-text-sequence: keystroke clusters -> pause at the space -> typo -> backspace -> bulk completion.
+      // Each entry shows from its t until the NEXT entry's t; [t, method, path].
+      var SEQ = [
+        [0.0, "", ""],
+        [0.44, "G", ""],
+        [0.52, "GE", ""],
+        [0.6, "GET", ""],
+        [0.72, "GET ", ""],
+        [0.82, "GET ", "/ap"],
+        [0.9, "GET ", "/api"],
+        [0.97, "GET ", "/api/v"],
+        [1.04, "GET ", "/api/v1"],
+        [1.11, "GET ", "/api/v1/h"],
+        [1.18, "GET ", "/api/v1/hun"],
+        [1.25, "GET ", "/api/v1/hu"],
+        [1.31, "GET ", "/api/v1/human-do"]
+      ];
+
+      function stateAt(t) {
+        for (var i = SEQ.length - 1; i >= 0; i--) {
+          if (t >= SEQ[i][0]) return SEQ[i];
+        }
+        return SEQ[0];
+      }
+
+      var RESPONSE_AT = 2.6;
+
+      var drv = { t: 0 };
+      tl.to(
+        drv,
+        {
+          t: D,
+          duration: D,
+          ease: "none",
+          onUpdate: function () {
+            var s = stateAt(drv.t);
+            if (methodEl.textContent !== s[1]) methodEl.textContent = s[1];
+            if (pathEl.textContent !== s[2]) pathEl.textContent = s[2];
+            var v = drv.t >= RESPONSE_AT + 0.08 ? "received" : "awaiting";
+            if (statusVal.textContent !== v) statusVal.textContent = v;
+          }
+        },
+        0
+      );
+
+      /* ---------- Scene 2 (1.4–2.6s) — held. Just the caret blinking. ---------- */
+      // deterministic sin square wave on the same timeline (one cycle per ~0.72s)
+      var blk = { p: 0 };
+      tl.to(
+        blk,
+        {
+          p: Math.PI * 2 * 6,
+          duration: D,
+          ease: "none",
+          onUpdate: function () {
+            caret.style.opacity = Math.sin(blk.p) > 0 ? "1" : "0";
+          }
+        },
+        0
+      );
+
+      /* ---------- Scene 3 (2.6–4.309s) — kinetic-beat-slam response, hold on the 402 ---------- */
+      // ONE tempo grid drives every hit.
+      var PULSE = 0.13;
+      var BEATS = [RESPONSE_AT, RESPONSE_AT + PULSE * 1, RESPONSE_AT + PULSE * 3];
+
+      // the request line above dims out of the way
+      tl.to([methodEl, pathEl], { color: "#3A5269", duration: 0.4, ease: "power2.out" }, BEATS[0]);
+      tl.to(caret, { backgroundColor: "#3A5269", duration: 0.4, ease: "power2.out" }, BEATS[0]);
+
+      // distinct entrance per phrase — side snap / scale slam / rise+rotate
+      tl.fromTo(proto, { x: -56, opacity: 0 }, { x: 0, opacity: 1, duration: 0.36, ease: "expo.out" }, BEATS[0]);
+      tl.fromTo(
+        code,
+        { scale: 1.55, filter: "blur(14px)", opacity: 0 },
+        { scale: 1, filter: "blur(0px)", opacity: 1, duration: 0.44, ease: "power4.out" },
+        BEATS[1]
+      );
+      tl.fromTo(
+        phrase,
+        { y: 34, rotation: 3, opacity: 0 },
+        { y: 0, rotation: 0, opacity: 1, duration: 0.44, ease: "circ.out" },
+        BEATS[2]
+      );
+
+      // one glow bloom on the 402, then it decays
+      tl.fromTo(bloom, { opacity: 0, scale: 1.25 }, { opacity: 0.95, scale: 1, duration: 0.2, ease: "power2.out" }, BEATS[1]);
+      tl.to(bloom, { opacity: 0, duration: 0.95, ease: "power2.out" }, BEATS[1] + 0.22);
+
+      // the surface briefly takes the accent hairline, then returns
+      tl.to(panel, { borderColor: "rgba(13,204,255,0.28)", duration: 0.14, ease: "power2.out" }, BEATS[1]);
+      tl.to(panel, { borderColor: "#1C2A3A", duration: 0.95, ease: "power2.out" }, BEATS[1] + 0.16);
+
+      // HOLD on the 402 — a single slow push, no repeat/yoyo
+      tl.to(panel, { scale: 1.012, duration: 1.25, ease: "sine.inOut" }, 3.05);
+
+      window.__timelines["03-the-call"] = tl;
+    })();
+  </script>
+</template>

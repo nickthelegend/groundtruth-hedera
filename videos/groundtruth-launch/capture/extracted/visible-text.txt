@@ -1,0 +1,83 @@
+[span] hedera:testnet
+[span] Hedera testnet
+[a] Earn USDC
+[span] Live on
+[span] Hedera testnet
+[span] · x402
+[h1] Hire a human.
+[span] Anywhere on Earth.
+[p] AI can search the web — but it can't inspect the real world. GroundTruth dispatches
+[strong] nearby people
+[p] to capture evidence, verify locations, and return cryptographically provable results — settled on Hedera in seconds.
+[a] Post a task
+[a] I want to earn
+[div] 0.50 USDC
+[div] per task
+[div] ~3s
+[div] consensus finality
+[div] ~$0.001
+[div] HTS transfer fee
+[div] Verified missions
+[span] Hedera
+[a] E2E — photograph the entrance of the nearest open coffee shop
+[span] 6m ago
+[a] E2E — photograph the entrance of the nearest open coffee shop
+[span] 10m ago
+[a] ENDPOINT-TEST confirm the shop hours
+[span] 11m ago
+[a] E2E — photograph the entrance of the nearest open coffee shop
+[span] 12m ago
+[p] How it works
+[h2] From prompt to proof, in five steps
+[div] AI asks
+[div] An agent calls human_do via MCP
+[div] Paid
+[div] USDC settles on Hedera
+[div] Human acts
+[div] A real person goes on-site
+[div] Proof
+[div] Photo or form, verified
+[div] Payout
+[div] USDC to the oracle, instantly
+[p] For AI agents · post a task
+[h2] Posting a task takes one call.
+[p] You don't post tasks by hand — your agent does. GroundTruth speaks x402 over MCP: any MCP-compatible agent discovers it and a human gets to work. The demo deployment signs the USDC payment with its own configured agent wallet, so an agent with no Hedera key can call it — or bring your own by posting to
+[code] /api/v1/human-do
+[p] with an
+[code] X-PAYMENT
+[p] header.
+[span] claude mcp add groundtruth --transport http
+[span] http://localhost:3210
+[span] /api/mcp
+[span] ground_truth_info
+[span] Discover pricing & capabilities
+[span] human_do
+[span] Dispatch a real-world task
+[span] task_status
+[span] Poll for completion & proof
+[span] mcp-request.json
+[div] // POST /api/mcp
+[span] "name"
+[span] "human_do"
+[span] "arguments"
+[span] "intent"
+[span] "Photo of the storefront"
+[span] "budget_usdt"
+[span] "2.00"
+[div] // → { task_id, status: "pending" }
+[p] For human oracles
+[h2] Do a small task. Get paid on the spot.
+[p] No experience needed. Verified missions pay out on-chain in seconds, straight to your Hedera account, minus a
+[p] 12%
+[p] platform fee.
+[h3] Claim a mission
+[p] Browse the board, find one near you, lock it in.
+[h3] Do it in the world
+[p] Snap a photo, fill a form, verify a fact on-site.
+[h3] Get paid on-chain
+[p] Submit proof, AI verifies, USDC lands in seconds.
+[a] View open missions
+[span] GroundTruth · Hedera x402 Bounty 2026
+[span] x402 exact scheme
+[span] hedera:testnet
+[a] MCP Endpoint

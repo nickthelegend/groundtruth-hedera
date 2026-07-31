@@ -23,6 +23,13 @@ export const PAYMENT_ASSET_SYMBOL =
 
 export const HASHSCAN_BASE = `https://hashscan.io/${HEDERA_NETWORK_NAME}`
 
+/**
+ * Public Mirror Node REST base. Safe to call from the browser — it is a public,
+ * read-only, CORS-enabled endpoint, which is what lets the wallet UI resolve an
+ * EVM address to a Hedera account id without a server round-trip.
+ */
+export const MIRROR_NODE_URL = `https://${HEDERA_NETWORK_NAME}.mirrornode.hedera.com`
+
 /** Task price and platform fee, for copy that quotes them. */
 export const TASK_PRICE = process.env.ASP_PRICE_USDT ?? '2.00'
 export const FEE_BPS = Number(process.env.ASP_FEE_BPS ?? '1200')

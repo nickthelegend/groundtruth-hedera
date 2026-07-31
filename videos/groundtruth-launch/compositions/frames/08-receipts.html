@@ -1,0 +1,573 @@
+<template>
+  <style>
+    /* Declared locally as well as globally so the frame is self-contained and
+       lint can see the faces it names. Paths are project-relative. */
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="08-receipts"
+    data-start="0"
+    data-duration="9.78"
+    data-width="1920"
+    data-height="1080"
+  >
+    <style>
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        container-type: size;
+        font-kerning: normal;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── full-bleed ground (its own clip layer — never a background on #root) ── */
+      .rcpt08-bg {
+        position: absolute;
+        inset: 0;
+        background: #04060a;
+        overflow: hidden;
+      }
+      .rcpt08-shot {
+        position: absolute;
+        left: -4%;
+        top: -4%;
+        width: 108%;
+        height: 108%;
+        object-fit: cover;
+        opacity: 0.25;
+        filter: blur(14px) saturate(0.85);
+      }
+      .rcpt08-veil {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          124% 96% at 50% 40%,
+          rgba(4, 6, 10, 0.06) 0%,
+          rgba(4, 6, 10, 0.62) 62%,
+          rgba(4, 6, 10, 0.96) 100%
+        );
+      }
+      .rcpt08-grid {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(
+          circle,
+          rgba(13, 204, 255, 0.1) 1.4px,
+          transparent 1.5px
+        );
+        background-size: 44px 44px;
+        background-position: 12px 12px;
+      }
+
+      /* ── the three receipt rows ── */
+      .rcpt08-rows {
+        position: absolute;
+        left: 310px;
+        top: 290px;
+        width: 1300px;
+      }
+      .rcpt08-row {
+        position: relative;
+        height: 104px;
+      }
+      .rcpt08-row + .rcpt08-row {
+        margin-top: 24px;
+      }
+      .rcpt08-rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: #274056;
+      }
+      .rcpt08-bar {
+        position: absolute;
+        left: 0;
+        top: 14px;
+        width: 3px;
+        height: 76px;
+        border-radius: 2px;
+        background: #1c2a3a;
+      }
+      .rcpt08-inner {
+        position: absolute;
+        left: 34px;
+        right: 82px;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+      }
+      .rcpt08-label {
+        flex: 0 0 auto;
+        width: 216px;
+        font-family: "Inter", system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 30px;
+        letter-spacing: 0.02em;
+        color: #7a9ab5;
+      }
+      .rcpt08-id {
+        flex: 0 0 auto;
+        display: inline-block;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-weight: 400;
+        font-size: 42px;
+        line-height: 1.34;
+        letter-spacing: 0;
+        color: #edf2f7;
+        white-space: pre;
+        overflow: hidden;
+      }
+      .rcpt08-tick {
+        position: absolute;
+        right: 6px;
+        top: 28px;
+        width: 46px;
+        height: 46px;
+      }
+      .rcpt08-tick path {
+        fill: none;
+        stroke: #00e87a;
+        stroke-width: 4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ── the closing stat pair ── */
+      .rcpt08-divider {
+        position: absolute;
+        left: 310px;
+        top: 442px;
+        width: 1300px;
+        height: 1px;
+        background: #1c2a3a;
+      }
+      .rcpt08-stat-main {
+        position: absolute;
+        left: 560px;
+        top: 492px;
+        width: 800px;
+        text-align: center;
+      }
+      .rcpt08-num-main {
+        font-family: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 178px;
+        line-height: 0.95;
+        letter-spacing: -0.025em;
+        font-variant-numeric: tabular-nums;
+        color: #0dccff;
+      }
+      .rcpt08-cap-main {
+        margin-top: 16px;
+        font-family: "Inter", system-ui, sans-serif;
+        font-weight: 400;
+        font-size: 30px;
+        letter-spacing: 0.012em;
+        color: #7a9ab5;
+      }
+      .rcpt08-stat-sub {
+        position: absolute;
+        left: 1230px;
+        top: 562px;
+        width: 500px;
+        text-align: left;
+      }
+      .rcpt08-sep {
+        position: absolute;
+        left: -54px;
+        top: -72px;
+        width: 1px;
+        height: 222px;
+        background: #1c2a3a;
+      }
+      .rcpt08-num-sub {
+        font-family: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 106px;
+        line-height: 0.95;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: #edf2f7;
+      }
+      .rcpt08-cap-sub {
+        margin-top: 14px;
+        font-family: "Inter", system-ui, sans-serif;
+        font-weight: 400;
+        font-size: 26px;
+        letter-spacing: 0.012em;
+        color: #7a9ab5;
+      }
+    </style>
+
+    <!-- track 0 — full-bleed ground: #04060A + the live stats page, dimmed + blurred, + cyan dot grid -->
+    <div
+      id="rcpt08-bg"
+      class="clip rcpt08-bg"
+      data-start="0"
+      data-duration="9.78"
+      data-track-index="0"
+    >
+      <img id="rcpt08-shot" class="rcpt08-shot" src="assets/pulse-dark.png" alt="" />
+      <div class="rcpt08-veil"></div>
+      <div class="rcpt08-grid"></div>
+    </div>
+
+    <!-- track 1 — the three receipt rows -->
+    <div
+      id="rcpt08-rows"
+      class="clip rcpt08-rows"
+      data-start="0"
+      data-duration="9.78"
+      data-track-index="1"
+    >
+      <div class="rcpt08-row">
+        <div class="rcpt08-rule" data-rule></div>
+        <div class="rcpt08-bar" data-bar></div>
+        <div class="rcpt08-inner">
+          <div class="rcpt08-label" data-label>payment</div>
+          <div class="rcpt08-id" data-id>0.0.7162784@1785525175.463617976</div>
+        </div>
+        <svg class="rcpt08-tick" viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg">
+          <path data-tick d="M 10 24 L 19.5 33 L 36 13" />
+        </svg>
+      </div>
+
+      <div class="rcpt08-row">
+        <div class="rcpt08-rule" data-rule></div>
+        <div class="rcpt08-bar" data-bar></div>
+        <div class="rcpt08-inner">
+          <div class="rcpt08-label" data-label>payout</div>
+          <div class="rcpt08-id" data-id>0.0.9847867@1785525201.407410064</div>
+        </div>
+        <svg class="rcpt08-tick" viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg">
+          <path data-tick d="M 10 24 L 19.5 33 L 36 13" />
+        </svg>
+      </div>
+
+      <div class="rcpt08-row">
+        <div class="rcpt08-rule" data-rule></div>
+        <div class="rcpt08-bar" data-bar></div>
+        <div class="rcpt08-inner">
+          <div class="rcpt08-label" data-label>anchor</div>
+          <div class="rcpt08-id" data-id>topic 0.0.9847942</div>
+        </div>
+        <svg class="rcpt08-tick" viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg">
+          <path data-tick d="M 10 24 L 19.5 33 L 36 13" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- track 2 — section rule under the compressed rows -->
+    <div
+      id="rcpt08-divider"
+      class="clip rcpt08-divider"
+      data-start="5.55"
+      data-duration="4.23"
+      data-track-index="2"
+    ></div>
+
+    <!-- track 3 — the hero count-up -->
+    <div
+      id="rcpt08-stat-main"
+      class="clip rcpt08-stat-main"
+      data-start="5.7"
+      data-duration="4.08"
+      data-track-index="3"
+    >
+      <div id="rcpt08-num-main" class="rcpt08-num-main">0</div>
+      <div id="rcpt08-cap-main" class="rcpt08-cap-main">assertions passing</div>
+    </div>
+
+    <!-- track 4 — the chaser count-up -->
+    <div
+      id="rcpt08-stat-sub"
+      class="clip rcpt08-stat-sub"
+      data-start="7.35"
+      data-duration="2.43"
+      data-track-index="4"
+    >
+      <div class="rcpt08-sep"></div>
+      <div id="rcpt08-num-sub" class="rcpt08-num-sub">0</div>
+      <div id="rcpt08-cap-sub" class="rcpt08-cap-sub">against live infrastructure</div>
+    </div>
+
+    <script>
+      (function () {
+        var FRAME = "08-receipts";
+        var root = document.querySelector('[data-composition-id="' + FRAME + '"]');
+        if (!root || !window.gsap) return;
+        var all = function (sel) {
+          return Array.prototype.slice.call(root.querySelectorAll(sel));
+        };
+        var one = function (sel) {
+          return root.querySelector(sel);
+        };
+
+        var INK = "#EDF2F7";
+        var MUTED = "#7A9AB5";
+        var FAINT = "#3A5269";
+        var LINE = "#1C2A3A";
+        var CYAN = "#0DCCFF";
+
+        var rows = all(".rcpt08-row");
+        var rules = all("[data-rule]");
+        var bars = all("[data-bar]");
+        var labels = all("[data-label]");
+        var ids = all("[data-id]");
+        var ticks = all("[data-tick]");
+
+        // svg-path-draw setup — measured geometry, never a magic number
+        var tickLen = ticks.map(function (p) {
+          var len = p.getTotalLength();
+          // long gap + a 6-unit offset pad parks the whole path (and the round
+          // linecap that would otherwise leave a dot) outside the visible dash
+          var start = len + 6;
+          p.style.strokeDasharray = len + " " + (len + 30);
+          p.style.strokeDashoffset = String(start);
+          return start;
+        });
+
+        // monospace character reveal — the id types on one glyph at a time
+        var idChars = ids.map(function (el) {
+          return el.textContent.length;
+        });
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+
+        // ── macro camera underneath: the live stats page settles, then holds ──
+        tl.fromTo(
+          one("#rcpt08-shot"),
+          { scale: 1.08 },
+          { scale: 1, duration: 5.4, ease: "power1.out" },
+          0,
+        );
+
+        // ── Scene 1 (0.0–1.4s) · three empty hairline rows draw on, stacked centre ──
+        tl.fromTo(
+          one("#rcpt08-rows"),
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+          0.0,
+        );
+        [0.06, 0.24, 0.42].forEach(function (at, i) {
+          tl.fromTo(
+            rules[i],
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              duration: 0.58,
+              ease: "power2.out",
+              transformOrigin: "left center",
+            },
+            at,
+          );
+        });
+        // bars stay dark + collapsed until their row is the active one
+        bars.forEach(function (b) {
+          tl.set(b, { scaleY: 0, transformOrigin: "top center" }, 0);
+        });
+
+        // ── row fill: bar → label → typed id → tick ──
+        function fillRow(i, at) {
+          tl.fromTo(
+            bars[i],
+            { scaleY: 0, backgroundColor: CYAN },
+            {
+              scaleY: 1,
+              duration: 0.28,
+              ease: "power2.out",
+              transformOrigin: "top center",
+              immediateRender: false,
+            },
+            at,
+          );
+          tl.fromTo(
+            labels[i],
+            { opacity: 0, x: -12 },
+            { opacity: 1, x: 0, duration: 0.32, ease: "power2.out" },
+            at + 0.06,
+          );
+          var n = idChars[i];
+          var typeDur = i === 2 ? 0.46 : 0.62;
+          tl.fromTo(
+            ids[i],
+            { width: "0ch" },
+            {
+              width: n + "ch",
+              duration: typeDur,
+              ease: "steps(" + n + ")",
+            },
+            at + 0.26,
+          );
+          tl.fromTo(
+            ticks[i],
+            { strokeDashoffset: tickLen[i] },
+            { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" },
+            at + 0.26 + typeDur + 0.02,
+          );
+        }
+        // previous row's accent bar drops to the hairline; its green tick stays
+        function coolBar(i, at) {
+          tl.fromTo(
+            bars[i],
+            { backgroundColor: CYAN },
+            {
+              backgroundColor: LINE,
+              duration: 0.35,
+              ease: "power1.out",
+              immediateRender: false,
+            },
+            at,
+          );
+        }
+
+        // Scene 2 (1.4–2.6s) · "Payment."
+        fillRow(0, 1.4);
+        // Scene 3 (2.6–3.8s) · "Payout."
+        coolBar(0, 2.66);
+        fillRow(1, 2.7);
+        // Scene 4 (3.8–5.4s) · "Proof anchored to consensus."
+        coolBar(1, 3.96);
+        fillRow(2, 4.0);
+
+        // ── Scene 5 (5.4–7.4s) · rows compress upward + dim; 0 → 243 dead-centre ──
+        tl.fromTo(
+          one("#rcpt08-rows"),
+          { y: 0, scale: 1 },
+          {
+            y: -192,
+            scale: 0.84,
+            duration: 0.85,
+            ease: "power2.inOut",
+            transformOrigin: "50% 0%",
+            immediateRender: false,
+          },
+          5.42,
+        );
+        coolBar(2, 5.42);
+        labels.forEach(function (el) {
+          tl.fromTo(
+            el,
+            { color: MUTED },
+            { color: FAINT, duration: 0.6, ease: "power1.out", immediateRender: false },
+            5.42,
+          );
+        });
+        ids.forEach(function (el) {
+          tl.fromTo(
+            el,
+            { color: INK },
+            { color: FAINT, duration: 0.6, ease: "power1.out", immediateRender: false },
+            5.42,
+          );
+        });
+        rules.forEach(function (el) {
+          tl.fromTo(
+            el,
+            { backgroundColor: "#274056" },
+            {
+              backgroundColor: LINE,
+              duration: 0.6,
+              ease: "power1.out",
+              immediateRender: false,
+            },
+            5.42,
+          );
+        });
+
+        tl.fromTo(
+          one("#rcpt08-divider"),
+          { scaleX: 0, opacity: 0 },
+          {
+            scaleX: 1,
+            opacity: 1,
+            duration: 0.7,
+            ease: "power2.out",
+            transformOrigin: "left center",
+          },
+          5.62,
+        );
+
+        tl.fromTo(
+          one("#rcpt08-stat-main"),
+          { opacity: 0, y: 24 },
+          { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" },
+          5.78,
+        );
+
+        // count-up — deterministic proxy, rounded per frame
+        var mainEl = one("#rcpt08-num-main");
+        var mainVal = { v: 0 };
+        mainEl.textContent = "0";
+        tl.fromTo(
+          mainVal,
+          { v: 0 },
+          {
+            v: 243,
+            duration: 1.25,
+            ease: "power2.out",
+            onUpdate: function () {
+              mainEl.textContent = String(Math.round(mainVal.v));
+            },
+          },
+          5.9,
+        );
+
+        tl.fromTo(
+          one("#rcpt08-cap-main"),
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.4, ease: "power1.out" },
+          7.0,
+        );
+
+        // ── Scene 6 (7.4s → end) · the chaser: 0 → 111 beside it, then HOLD ──
+        tl.fromTo(
+          one("#rcpt08-stat-sub"),
+          { opacity: 0, x: 20 },
+          { opacity: 1, x: 0, duration: 0.5, ease: "power2.out" },
+          7.42,
+        );
+
+        var subEl = one("#rcpt08-num-sub");
+        var subVal = { v: 0 };
+        subEl.textContent = "0";
+        tl.fromTo(
+          subVal,
+          { v: 0 },
+          {
+            v: 111,
+            duration: 1.05,
+            ease: "power2.out",
+            onUpdate: function () {
+              subEl.textContent = String(Math.round(subVal.v));
+            },
+          },
+          7.52,
+        );
+
+        tl.fromTo(
+          one("#rcpt08-cap-sub"),
+          { opacity: 0, y: 8 },
+          { opacity: 1, y: 0, duration: 0.4, ease: "power1.out" },
+          8.35,
+        );
+        // 8.75 → end · dead still. No drift, no push.
+
+        window.__timelines[FRAME] = tl;
+      })();
+    </script>
+  </div>
+</template>

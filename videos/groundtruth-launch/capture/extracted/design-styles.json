@@ -1,0 +1,240 @@
+{
+  "typography": [
+    {
+      "role": "display",
+      "fontFamily": "__Bricolage_Grotesque_a4bae9",
+      "fontSize": "60px",
+      "fontWeight": "800",
+      "lineHeight": "60px",
+      "letterSpacing": "-1.5px",
+      "color": "#EDF2F7",
+      "sampleText": "Hire a human.Anywhere on Earth."
+    },
+    {
+      "role": "heading",
+      "fontFamily": "__Bricolage_Grotesque_a4bae9",
+      "fontSize": "36px",
+      "fontWeight": "800",
+      "lineHeight": "40px",
+      "letterSpacing": "normal",
+      "color": "#EDF2F7",
+      "sampleText": "From prompt to proof, in five steps"
+    },
+    {
+      "role": "heading-2",
+      "fontFamily": "__Bricolage_Grotesque_a4bae9",
+      "fontSize": "30px",
+      "fontWeight": "800",
+      "lineHeight": "36px",
+      "letterSpacing": "normal",
+      "color": "#EDF2F7",
+      "sampleText": "Posting a task takes one call."
+    },
+    {
+      "role": "body",
+      "fontFamily": "__Inter_f367f3",
+      "fontSize": "18px",
+      "fontWeight": "400",
+      "lineHeight": "29.25px",
+      "letterSpacing": "normal",
+      "color": "#7A9AB5",
+      "sampleText": "AI can search the web — but it can't inspect the real world."
+    },
+    {
+      "role": "heading-3",
+      "fontFamily": "__Bricolage_Grotesque_a4bae9",
+      "fontSize": "16px",
+      "fontWeight": "700",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "color": "#EDF2F7",
+      "sampleText": "Claim a mission"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      20,
+      24,
+      28,
+      32,
+      40,
+      48,
+      80
+    ],
+    "baseUnit": 4
+  },
+  "radius": [
+    "8px",
+    "20px",
+    "999px"
+  ],
+  "shadows": [
+    {
+      "value": "rgba(0, 0, 0, 0.4) 0px 1px 2px 0px",
+      "count": 14
+    },
+    {
+      "value": "rgb(8, 146, 189) 0px 4px 0px 0px",
+      "count": 3
+    },
+    {
+      "value": "rgb(39, 64, 86) 0px 4px 0px 0px",
+      "count": 1
+    }
+  ],
+  "buttons": [
+    {
+      "label": "☀️🌙🌙",
+      "background": "#0A1119",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#EDF2F7",
+      "padding": "0px 4px",
+      "borderRadius": "9999px",
+      "border": "1px solid rgb(39, 64, 86)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "32px"
+    },
+    {
+      "label": "Earn USDC →",
+      "background": "#0DCCFF",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#04060A",
+      "padding": "6px 16px",
+      "borderRadius": "999px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "rgb(8, 146, 189) 0px 4px 0px 0px",
+      "fontSize": "14px",
+      "fontWeight": "700",
+      "height": "32px"
+    },
+    {
+      "label": "→",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#04060A",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "none",
+      "fontSize": "15px",
+      "fontWeight": "700",
+      "height": "22.5px"
+    },
+    {
+      "label": "I want to earn",
+      "background": "#0C1420",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#EDF2F7",
+      "padding": "14px 28px",
+      "borderRadius": "999px",
+      "border": "1px solid rgb(39, 64, 86)",
+      "boxShadow": "rgb(39, 64, 86) 0px 4px 0px 0px",
+      "fontSize": "15px",
+      "fontWeight": "700",
+      "height": "52.5px"
+    }
+  ],
+  "cards": [
+    {
+      "label": "card",
+      "background": "#0C1420",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#EDF2F7",
+      "padding": "16px 12px",
+      "borderRadius": "20px",
+      "border": "1px solid rgb(28, 42, 58)",
+      "boxShadow": "rgba(0, 0, 0, 0.4) 0px 1px 2px 0px",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "118px"
+    }
+  ],
+  "nav": {
+    "label": "navigation",
+    "background": "color(srgb 0.0156863 0.0235294 0.0392157 / 0.82)",
+    "backgroundImage": "",
+    "backdropFilter": "blur(12px)",
+    "color": "#EDF2F7",
+    "padding": "0px",
+    "borderRadius": "0px",
+    "border": "",
+    "boxShadow": "none",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "height": "65px"
+  },
+  "chips": [
+    {
+      "label": "Live on Hedera testnet ·",
+      "background": "#0DCCFF",
+      "color": "#0DCCFF",
+      "padding": "6px 12px",
+      "borderRadius": "999px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "27px"
+    },
+    {
+      "label": "Verified missions",
+      "background": "transparent",
+      "color": "#00E87A",
+      "padding": "0px",
+      "borderRadius": "999px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "400",
+      "height": "15px"
+    },
+    {
+      "label": "✓",
+      "background": "#00E87A",
+      "color": "#00E87A",
+      "padding": "0px",
+      "borderRadius": "9999px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "none",
+      "fontSize": "10px",
+      "fontWeight": "400",
+      "height": "20px"
+    }
+  ],
+  "statCells": [],
+  "tabs": [],
+  "backgrounds": [
+    {
+      "value": "radial-gradient(circle, rgba(13, 204, 255, 0.1) 1px, rgba(0, 0, 0, 0) 1px)",
+      "area": 1384320
+    },
+    {
+      "value": "radial-gradient(circle at 50% 45%, rgba(13, 204, 255, 0.1), rgba(0, 0, 0, 0) 65%)",
+      "area": 176400
+    }
+  ],
+  "glass": [
+    {
+      "backdropFilter": "blur(12px)",
+      "background": "color(srgb 0.0156863 0.0235294 0.0392157 / 0.82)",
+      "border": "",
+      "borderRadius": "0px",
+      "boxShadow": "",
+      "area": 124800
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "files": [
+    {
+      "file": "BricolageGrotesque-Bold.woff2",
+      "path": "assets/fonts/BricolageGrotesque-Bold.woff2",
+      "family": "Bricolage Grotesque",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "file": "BricolageGrotesque-ExtraBold.woff2",
+      "path": "assets/fonts/BricolageGrotesque-ExtraBold.woff2",
+      "family": "Bricolage Grotesque",
+      "weight": 800,
+      "style": "normal"
+    },
+    {
+      "file": "BricolageGrotesque-Regular.woff2",
+      "path": "assets/fonts/BricolageGrotesque-Regular.woff2",
+      "family": "Bricolage Grotesque",
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "file": "Bricolage_Grotesque_ExtraBold.woff2",
+      "path": "assets/fonts/Bricolage_Grotesque_ExtraBold.woff2",
+      "family": "Bricolage Grotesque",
+      "weight": 800,
+      "style": "normal"
+    },
+    {
+      "file": "Inter-Bold.woff2",
+      "path": "assets/fonts/Inter-Bold.woff2",
+      "family": "Inter",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "file": "Inter-Medium.woff2",
+      "path": "assets/fonts/Inter-Medium.woff2",
+      "family": "Inter",
+      "weight": 500,
+      "style": "normal"
+    },
+    {
+      "file": "Inter-Regular.woff2",
+      "path": "assets/fonts/Inter-Regular.woff2",
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "file": "Inter_Bold.woff2",
+      "path": "assets/fonts/Inter_Bold.woff2",
+      "family": "Inter",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "file": "Inter_Medium.woff2",
+      "path": "assets/fonts/Inter_Medium.woff2",
+      "family": "Inter",
+      "weight": 500,
+      "style": "normal"
+    },
+    {
+      "file": "Inter_Regular.woff2",
+      "path": "assets/fonts/Inter_Regular.woff2",
+      "family": "Inter",
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "file": "JetBrainsMono-Bold.woff2",
+      "path": "assets/fonts/JetBrainsMono-Bold.woff2",
+      "family": "JetBrains Mono",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "file": "JetBrainsMono-Regular.woff2",
+      "path": "assets/fonts/JetBrainsMono-Regular.woff2",
+      "family": "JetBrains Mono",
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "file": "JetBrainsMono-SemiBold.woff2",
+      "path": "assets/fonts/JetBrainsMono-SemiBold.woff2",
+      "family": "JetBrains Mono",
+      "weight": 700,
+      "style": "normal"
+    },
+    {
+      "file": "JetBrains_Mono_Regular.woff2",
+      "path": "assets/fonts/JetBrains_Mono_Regular.woff2",
+      "family": "JetBrains Mono",
+      "weight": 400,
+      "style": "normal"
+    },
+    {
+      "file": "JetBrains_Mono_SemiBold.woff2",
+      "path": "assets/fonts/JetBrains_Mono_SemiBold.woff2",
+      "family": "JetBrains Mono",
+      "weight": 700,
+      "style": "normal"
+    }
+  ],
+  "families": [
+    {
+      "family": "Bricolage Grotesque",
+      "weights": [
+        400,
+        700,
+        800
+      ]
+    },
+    {
+      "family": "Inter",
+      "weights": [
+        400,
+        500,
+        700
+      ]
+    },
+    {
+      "family": "JetBrains Mono",
+      "weights": [
+        400,
+        700
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-08-01T00:00:00.000Z",
+    "tool": "manual-stage"
+  }
+}

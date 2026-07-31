@@ -1,0 +1,333 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+  <style>
+    /* Fonts declared by frame.md; staged WOFF2 resolve locally, otherwise the
+       installed face is used via local(). */
+    @font-face {
+      font-family: "Bricolage Grotesque";
+      font-style: normal;
+      font-weight: 800;
+      font-display: block;
+      src:
+        local("Bricolage Grotesque ExtraBold"),
+        local("BricolageGrotesque-ExtraBold"),
+        local("Bricolage Grotesque"),
+        url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      font-style: normal;
+      font-weight: 600;
+      font-display: block;
+      src:
+        local("JetBrains Mono SemiBold"),
+        local("JetBrainsMono-SemiBold"),
+        local("JetBrains Mono"),
+        url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+    }
+
+    /* Frame root — styled by #root (never a class on the composition-id element). */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+    }
+
+    /* ── track 0 · full-bleed ground + cyan dot grid (its own clip layer) ── */
+    .f09cta-bg {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+      background-image: radial-gradient(
+        circle,
+        rgba(13, 204, 255, 0.1) 1.5px,
+        rgba(13, 204, 255, 0) 1.5px
+      );
+      background-size: 44px 44px;
+      background-position: 22px 22px;
+    }
+
+    /* ── track 1 · ambient glow bloom, behind the mark ── */
+    .f09cta-glow {
+      position: absolute;
+      left: 510px;
+      top: -20px;
+      width: 900px;
+      height: 900px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle at 50% 50%,
+        rgba(13, 204, 255, 0.65) 0%,
+        rgba(13, 204, 255, 0.24) 32%,
+        rgba(13, 204, 255, 0) 68%
+      );
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+
+    /* ── track 2 · the brand mark — dead-centre, 150px tall at x=960 / y=430 ── */
+    .f09cta-mark {
+      position: absolute;
+      left: 885px;
+      top: 355px;
+      width: 150px;
+      height: 150px;
+    }
+    .f09cta-mark svg {
+      display: block;
+      width: 150px;
+      height: 150px;
+    }
+
+    /* ── track 3 · wordmark, centred at y=580 ── */
+    .f09cta-wordmark {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 533px;
+      height: 94px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Bricolage Grotesque", Georgia, serif;
+      font-weight: 800;
+      font-size: 92px;
+      line-height: 1.02;
+      letter-spacing: -0.022em;
+      color: #edf2f7;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ── track 4 · the address, centred at y=660 ── */
+    .f09cta-url {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 641px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 600;
+      font-size: 33px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #0dccff;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ── track 5 · the hedera:testnet chip returns lower-left (x=120, y=843 — lifted clear of the caption keep-out) ── */
+    .f09cta-chip {
+      position: absolute;
+      left: 120px;
+      top: 820px;
+      height: 46px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 22px;
+      border: 1px solid #1c2a3a;
+      border-radius: 9999px;
+      background: #0a1119;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 600;
+      font-size: 26px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+      white-space: nowrap;
+      opacity: 0;
+    }
+    .f09cta-chip-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #0dccff;
+      flex: none;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="09-cta"
+    data-start="0"
+    data-duration="3.563"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- full-bleed ground, own clip layer, full-frame timing -->
+    <div
+      class="clip f09cta-bg"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="0"
+    ></div>
+
+    <div
+      id="f09cta-glow"
+      class="clip f09cta-glow"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="1"
+    ></div>
+
+    <div
+      class="clip f09cta-mark"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="2"
+    >
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="GroundTruth">
+        <g stroke="#0DCCFF" stroke-width="2.4" stroke-linecap="round" opacity="0.9">
+          <line id="f09cta-line-l" x1="5" y1="36" x2="15.5" y2="36"></line>
+          <line id="f09cta-line-r" x1="24.5" y1="36" x2="35" y2="36"></line>
+        </g>
+        <path
+          id="f09cta-pin"
+          d="M20 3.5c-6.35 0-11.5 5.05-11.5 11.28 0 7.9 8.9 15.3 10.86 17.86.34.45.94.45 1.28 0C22.6 30.08 31.5 22.68 31.5 14.78 31.5 8.55 26.35 3.5 20 3.5Z"
+          fill="#0DCCFF"
+        ></path>
+        <path
+          id="f09cta-check"
+          d="M14.8 15.1l3.6 3.6 6.8-6.9"
+          stroke="#04060A"
+          stroke-width="2.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"
+        ></path>
+      </svg>
+    </div>
+
+    <div
+      id="f09cta-wordmark"
+      class="clip f09cta-wordmark"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="3"
+    >
+      GroundTruth
+    </div>
+
+    <div
+      id="f09cta-url"
+      class="clip f09cta-url"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="4"
+    >
+      groundtruth-hedera.vercel.app
+    </div>
+
+    <div
+      id="f09cta-chip"
+      class="clip f09cta-chip"
+      data-start="0"
+      data-duration="3.563"
+      data-track-index="5"
+    >
+      <span class="f09cta-chip-dot"></span><span>hedera:testnet</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var DUR = 3.563;
+
+      // ids start with a digit-free prefix so getElementById + direct node refs
+      // are used throughout — no selector strings, no escaping.
+      var glow = document.getElementById("f09cta-glow");
+      var lineL = document.getElementById("f09cta-line-l");
+      var lineR = document.getElementById("f09cta-line-r");
+      var pin = document.getElementById("f09cta-pin");
+      var check = document.getElementById("f09cta-check");
+      var wordmark = document.getElementById("f09cta-wordmark");
+      var url = document.getElementById("f09cta-url");
+      var chip = document.getElementById("f09cta-chip");
+
+      // ── svg-path-draw setup: measured geometry, never a magic number ──
+      function measure(el, fallback) {
+        var len = fallback;
+        if (el && typeof el.getTotalLength === "function") {
+          var m = el.getTotalLength();
+          if (m && isFinite(m) && m > 0) len = m;
+        }
+        return len;
+      }
+      var lenL = measure(lineL, 10.5);
+      var lenR = measure(lineR, 10.5);
+      var lenC = measure(check, 14.78) * 1.02;
+
+      // left ground line reveals from its LEFT end (positive offset),
+      // right ground line reveals from its RIGHT end (negative offset)
+      lineL.style.strokeDasharray = String(lenL);
+      lineL.style.strokeDashoffset = String(lenL);
+      lineR.style.strokeDasharray = String(lenR);
+      lineR.style.strokeDashoffset = String(-lenR);
+      check.style.strokeDasharray = String(lenC);
+      check.style.strokeDashoffset = String(lenC);
+
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* ══ Scene 1 (0.0–1.3s) — the mark assembles dead-centre ══ */
+
+      // 1. the two ground-line strokes draw in from left and right
+      tl.to(lineL, { strokeDashoffset: 0, duration: 0.44, ease: "power2.out" }, 0.06);
+      tl.to(lineR, { strokeDashoffset: 0, duration: 0.44, ease: "power2.out" }, 0.13);
+
+      // 2. the cyan pin body scales up from 0.9 on power3
+      tl.fromTo(
+        pin,
+        { opacity: 0, scale: 0.9, svgOrigin: "20 32" },
+        { opacity: 1, scale: 1, duration: 0.58, ease: "power3.out", svgOrigin: "20 32" },
+        0.26
+      );
+
+      // 3. the check inside draws on LAST, in #04060A
+      tl.to(check, { strokeDashoffset: 0, duration: 0.42, ease: "power2.out" }, 0.82);
+
+      // ambient-glow-bloom — lands on the mark's settle (0.30 + 0.94 = 1.24), then decays
+      tl.fromTo(
+        glow,
+        { opacity: 0, scale: 0.86 },
+        { opacity: 0.32, scale: 1.04, duration: 0.94, ease: "power2.out" },
+        0.3
+      );
+      tl.to(glow, { opacity: 0.1, scale: 1.14, duration: 1.66, ease: "power1.out" }, 1.24);
+
+      /* ══ Scene 2 (1.3–2.3s) — "GroundTruth." the wordmark sets, as ONE piece ══ */
+      tl.fromTo(
+        wordmark,
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 0.52, ease: "power3.out" },
+        1.32
+      );
+
+      /* ══ Scene 3 (2.3–3.563s) — "Deployed and live on Hedera testnet" ══ */
+      tl.fromTo(
+        url,
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        2.34
+      );
+      tl.fromTo(
+        chip,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.48, ease: "power2.out" },
+        2.55
+      );
+
+      /* ══ HOLD — everything landed and motionless from 3.03s to the cut ══ */
+      tl.to({}, { duration: DUR }, 0);
+
+      window.__timelines["09-cta"] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,334 @@
+<template>
+  <style>
+    /* ── JetBrains Mono — the only voice in this frame ─────────────────── */
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+      font-weight: 600;
+      font-style: normal;
+      font-display: block;
+    }
+
+    /* ── Frame root — styled by #root, never by a class ────────────────── */
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Track 0 · the full-bleed ground (its own clip layer) ──────────── */
+    .f01-cold-open-bg {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+    }
+
+    /* centre halo — the ambient-glow-bloom light, BEHIND the dot field */
+    .f01-cold-open-glow {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      transform-origin: 50% 50%;
+      background-image: radial-gradient(
+        circle 660px at 50% 50%,
+        rgba(13, 204, 255, 0.6) 0%,
+        rgba(13, 204, 255, 0.22) 42%,
+        rgba(13, 204, 255, 0) 78%
+      );
+    }
+
+    /* the dot grid — 34px pitch, soft radial mask fading toward the edges */
+    .f01-cold-open-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      transform-origin: 50% 50%;
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.1) 1.9px,
+        rgba(13, 204, 255, 0) 2px
+      );
+      background-size: 34px 34px;
+      background-position: 17px 17px;
+      -webkit-mask-image: radial-gradient(
+        ellipse 60% 68% at 50% 50%,
+        rgba(0, 0, 0, 1) 0%,
+        rgba(0, 0, 0, 0.86) 40%,
+        rgba(0, 0, 0, 0.38) 70%,
+        rgba(0, 0, 0, 0) 93%
+      );
+      mask-image: radial-gradient(
+        ellipse 60% 68% at 50% 50%,
+        rgba(0, 0, 0, 1) 0%,
+        rgba(0, 0, 0, 0.86) 40%,
+        rgba(0, 0, 0, 0.38) 70%,
+        rgba(0, 0, 0, 0) 93%
+      );
+    }
+
+    /* ── Track 1 · the asked line — prefix, typed question, caret ────────
+       One left-anchored row at x=370 so the type grows rightward like a
+       terminal. 28 chars × 32.4px advance + the prefix lands the finished
+       line centred on 960. Nothing here reaches the 900 caption keep-out. */
+    .f01-cold-open-line {
+      position: absolute;
+      left: 370px;
+      top: 505px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      height: 70px;
+    }
+    .f01-cold-open-prefix {
+      font-size: 34px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      line-height: 1;
+      color: #7a9ab5;
+      white-space: nowrap;
+    }
+    /* the typed question — width is animated in `ch`, so it reveals on exact
+       character boundaries and never lands mid-glyph on a seek */
+    .f01-cold-open-q {
+      font-size: 54px;
+      font-weight: 400;
+      letter-spacing: 0;
+      line-height: 1;
+      color: #edf2f7;
+      white-space: pre;
+      overflow: hidden;
+      width: 0;
+    }
+    .f01-cold-open-caret {
+      width: 14px;
+      height: 46px;
+      flex: 0 0 auto;
+      background-color: #0dccff;
+      border-radius: 1px;
+    }
+
+    /* ── Track 3 · the hairline chip, lower-left ───────────────────────── */
+    .f01-cold-open-chip {
+      position: absolute;
+      left: 80px; /* slide-pad */
+      top: 822px; /* bottom edge 868 — clear of the 900 keep-out */
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 20px;
+      border: 1px solid #1c2a3a;
+      border-radius: 9999px;
+      background-color: rgba(12, 20, 32, 0.55);
+    }
+    .f01-cold-open-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 9999px;
+      background-color: #0dccff;
+    }
+    .f01-cold-open-chip-label {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 1.25cqw; /* 24px @ 1920 — mono chrome */
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      color: #7a9ab5;
+      white-space: nowrap;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="01-cold-open"
+    data-start="0"
+    data-duration="4.8"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- Scene 1 (0.0–0.9s) · ground + dot grid blooming centre-out -->
+    <div
+      id="f01-cold-open-bg"
+      class="clip f01-cold-open-bg"
+      data-start="0"
+      data-duration="4.8"
+      data-track-index="0"
+    >
+      <div id="f01-cold-open-glow" class="f01-cold-open-glow"></div>
+      <div id="f01-cold-open-grid" class="f01-cold-open-grid"></div>
+    </div>
+
+    <!-- Scene 2 (0.7–4.8s) · the agent asks the one thing it cannot answer -->
+    <div
+      id="f01-cold-open-line"
+      class="clip f01-cold-open-line"
+      data-start="0.7"
+      data-duration="4.1"
+      data-track-index="1"
+    >
+      <span id="f01-cold-open-prefix" class="f01-cold-open-prefix">agent</span>
+      <span id="f01-cold-open-q" class="f01-cold-open-q">is this shop open right now?</span>
+      <span id="f01-cold-open-caret" class="f01-cold-open-caret"></span>
+    </div>
+
+    <!-- Scene 3 (3.9–4.8s) · hedera:testnet -->
+    <div
+      id="f01-cold-open-chip"
+      class="clip f01-cold-open-chip"
+      data-start="3.9"
+      data-duration="0.9"
+      data-track-index="2"
+    >
+      <span id="f01-cold-open-chip-dot" class="f01-cold-open-chip-dot"></span>
+      <span class="f01-cold-open-chip-label">hedera:testnet</span>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var glow = document.getElementById("f01-cold-open-glow");
+      var grid = document.getElementById("f01-cold-open-grid");
+      var prefix = document.getElementById("f01-cold-open-prefix");
+      var q = document.getElementById("f01-cold-open-q");
+      var caret = document.getElementById("f01-cold-open-caret");
+      var chip = document.getElementById("f01-cold-open-chip");
+      var chipDot = document.getElementById("f01-cold-open-chip-dot");
+
+      var DUR = 4.8;
+      var QCHARS = q.textContent.length; /* 28 */
+
+      var tl = gsap.timeline({ paused: true });
+
+      /* ───────────────────────────────────────────────────────────────
+         Scene 1 (0.0–0.9s) — ambient-glow-bloom, Form A.
+         The halo and the dot field resolve as ONE beat, centre-out. The
+         bloom is quick now: the frame has something to say, so it should
+         not spend a third of its length arriving.
+         ─────────────────────────────────────────────────────────────── */
+      var GLOW_PEAK = 0.28;
+      var BLOOM_DUR = 0.9;
+
+      tl.fromTo(
+        glow,
+        { opacity: 0, scale: 0.86 },
+        { opacity: GLOW_PEAK, scale: 1, duration: BLOOM_DUR, ease: "power2.out" },
+        0,
+      );
+      tl.fromTo(
+        grid,
+        { opacity: 0, scale: 0.93 },
+        { opacity: 1, scale: 1, duration: BLOOM_DUR, ease: "power2.out" },
+        0,
+      );
+
+      /* Bounded idle breathe across the remainder — one finite phase tween,
+         never a yoyo loop. sin(0) = 0, so it starts exactly at the bloom's
+         resting state. One breath over the rest of the shot. */
+      var OPACITY_AMP = 0.035;
+      var SCALE_AMP = 0.018;
+      var phase = { p: 0 };
+      tl.to(
+        phase,
+        {
+          p: Math.PI * 2,
+          duration: DUR - BLOOM_DUR,
+          ease: "none",
+          onUpdate: function () {
+            var s = Math.sin(phase.p);
+            glow.style.opacity = String(GLOW_PEAK + s * OPACITY_AMP);
+            glow.style.transform = "scale(" + (1 + s * SCALE_AMP) + ")";
+          },
+        },
+        BLOOM_DUR,
+      );
+
+      /* ───────────────────────────────────────────────────────────────
+         Scene 2 (0.7–4.8s) — the question.
+         The prefix settles first, then the question types on exact
+         character boundaries via a `ch` width on steps() easing. The caret
+         rides the end of the text because it is the next flex item, so it
+         travels without a single position tween.
+         ─────────────────────────────────────────────────────────────── */
+      var TYPE_AT = 0.9;
+      var TYPE_DUR = 2.4;
+
+      tl.fromTo(
+        prefix,
+        { opacity: 0, x: -10 },
+        { opacity: 1, x: 0, duration: 0.34, ease: "power2.out" },
+        0.7,
+      );
+      tl.fromTo(
+        q,
+        { width: "0ch" },
+        {
+          width: QCHARS + "ch",
+          duration: TYPE_DUR,
+          ease: "steps(" + QCHARS + ")",
+        },
+        TYPE_AT,
+      );
+
+      /* One bounded tween carries the caret's arrival ramp and its blink so
+         the 1.1s cadence is exact and every seek resolves the same way. */
+      var CARET_START = 0.7;
+      var CARET_DUR = DUR - CARET_START; /* 4.1 */
+      var PERIOD = 1.1;
+      var DUTY = 0.58;
+      var ARRIVE = 0.24;
+
+      tl.set(caret, { opacity: 0 }, 0);
+      tl.set(caret, { opacity: 0 }, CARET_START);
+
+      var blink = { p: 0 };
+      tl.to(
+        blink,
+        {
+          p: CARET_DUR / PERIOD,
+          duration: CARET_DUR,
+          ease: "none",
+          onUpdate: function () {
+            var elapsed = blink.p * PERIOD;
+            var lit = blink.p % 1 < DUTY ? 1 : 0;
+            var arrive = elapsed < ARRIVE ? elapsed / ARRIVE : 1;
+            caret.style.opacity = String(lit * arrive);
+          },
+        },
+        CARET_START,
+      );
+
+      /* ───────────────────────────────────────────────────────────────
+         Scene 3 (3.9–4.8s) — the hedera:testnet chip, lower-left.
+         Opacity only; nothing moves. The cyan dot lights a beat later so
+         the back half of the shot still has something arriving.
+         ─────────────────────────────────────────────────────────────── */
+      tl.fromTo(
+        chip,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.6, ease: "power2.out" },
+        3.9,
+      );
+      tl.fromTo(
+        chipDot,
+        { opacity: 0, scale: 0.4 },
+        { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" },
+        4.15,
+      );
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["01-cold-open"] = tl;
+    })();
+  </script>
+</template>

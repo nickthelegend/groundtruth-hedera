@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "preferences": {
+    "style_preset.product-launch-video": {
+      "value": "code-editorial",
+      "confirmed_in": [
+        "groundtruth-launch"
+      ],
+      "updated_at": "2026-07-31T19:22:42.657Z"
+    }
+  },
+  "sightings": {}
+}

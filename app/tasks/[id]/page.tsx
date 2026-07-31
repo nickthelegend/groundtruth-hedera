@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { PayoutAccount } from '@/app/payout-account'
 
 const VERIFY_STEPS = [
   { label: 'Uploading proof to GroundTruth network...', duration: 700 },
@@ -471,19 +472,7 @@ export default function TaskDetailPage({ params }: { params: { id: string } }) {
         {/* ── CLAIM ── */}
         {phase === 'view' && (
           <div className="space-y-4">
-            <div>
-              <label className="chip block text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
-                Your Hedera account id (to receive USDC)
-              </label>
-              <input
-                type="text"
-                placeholder="0.0.12345"
-                value={wallet}
-                onChange={e => setWallet(e.target.value)}
-                className="font-mono w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
-                style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              />
-            </div>
+            <PayoutAccount value={wallet} onChange={setWallet} />
 
             {error && (
               <p className="text-sm flex items-center gap-2" style={{ color: 'var(--accent)' }}>

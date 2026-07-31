@@ -1,0 +1,549 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+  <style>
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    /* Project fonts — resolved from the machine's installed faces; the family
+       stacks below fall back to the generic family if a face is unavailable. */
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: "Inter", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─────────── ground (full-bleed clip layer, never on #root) ─────────── */
+    .f04-challenge-bg {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+      overflow: hidden;
+    }
+    .f04-challenge-grid {
+      position: absolute;
+      inset: -80px;
+      background-image: radial-gradient(circle, rgba(13, 204, 255, 0.1) 1.6px, transparent 1.6px);
+      background-size: 46px 46px;
+    }
+    .f04-challenge-vign {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        ellipse 78% 68% at 34% 46%,
+        rgba(13, 204, 255, 0.045) 0%,
+        rgba(4, 6, 10, 0) 62%
+      );
+    }
+
+    /* ─────────── code surface (left 60%) ─────────── */
+    .f04-challenge-panel {
+      position: absolute;
+      left: 76px;
+      top: 100px;
+      width: 1000px;
+      height: 776px;
+      background: #0a1119;
+      border: 1px solid #1c2a3a;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .f04-challenge-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 54px;
+      background: #111c2b;
+      border-bottom: 1px solid #1c2a3a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px 0 34px;
+    }
+    .f04-challenge-fname {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #7a9ab5;
+    }
+    .f04-challenge-mime {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 21px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      color: #7a8b9c;
+    }
+
+    .f04-challenge-code {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 54px;
+      bottom: 0;
+      padding: 28px 34px;
+    }
+    .f04-challenge-glow {
+      position: absolute;
+      left: -40px;
+      top: 440px;
+      width: 780px;
+      height: 230px;
+      border-radius: 50%;
+      background: radial-gradient(
+        ellipse at 34% 50%,
+        rgba(13, 204, 255, 0.6) 0%,
+        rgba(13, 204, 255, 0.16) 44%,
+        rgba(13, 204, 255, 0) 72%
+      );
+      filter: blur(18px);
+      opacity: 0;
+      z-index: 0;
+    }
+    .f04-challenge-jl {
+      position: relative;
+      z-index: 1;
+      height: 39px;
+      line-height: 39px;
+      padding-left: 78px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 30px;
+      font-weight: 400;
+    }
+    .f04-challenge-ln {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 44px;
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 21px;
+      color: #77879a;
+      letter-spacing: 0.04em;
+    }
+    .f04-challenge-jl-text {
+      display: block;
+      white-space: pre;
+    }
+    .f04-challenge-hair {
+      position: absolute;
+      left: 58px;
+      top: 5px;
+      width: 3px;
+      height: 29px;
+      overflow: visible;
+      z-index: 2;
+    }
+    .f04-challenge-hair path {
+      fill: none;
+      stroke: #0dccff;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .f04-challenge-k {
+      color: #7a9ab5;
+    }
+    .f04-challenge-v {
+      color: #edf2f7;
+    }
+    .f04-challenge-p {
+      color: #7a8b9c;
+    }
+
+    /* ─────────── plain-English rail (right 40%) ─────────── */
+    .f04-challenge-rail {
+      position: absolute;
+      left: 1196px;
+      top: 100px;
+      width: 648px;
+      height: 776px;
+    }
+    .f04-challenge-eyebrow {
+      position: absolute;
+      left: 0;
+      top: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #707d8a;
+      opacity: 0;
+    }
+    .f04-challenge-spike {
+      color: #0dccff;
+      letter-spacing: 0.06em;
+    }
+    .f04-challenge-rule-top {
+      position: absolute;
+      left: 0;
+      top: 68px;
+      width: 100%;
+      height: 1px;
+      background: #1c2a3a;
+      transform-origin: 0% 50%;
+      opacity: 0;
+    }
+    .f04-challenge-rule-bot {
+      position: absolute;
+      left: 0;
+      top: 692px;
+      width: 100%;
+      height: 1px;
+      background: #1c2a3a;
+      transform-origin: 0% 50%;
+      opacity: 0;
+    }
+    .f04-challenge-foot {
+      position: absolute;
+      left: 0;
+      top: 712px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #707d8a;
+      opacity: 0;
+    }
+    .f04-challenge-gitem {
+      position: absolute;
+      left: 0;
+      top: 236px;
+      width: 648px;
+      opacity: 0;
+    }
+    .f04-challenge-glabel {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #707d8a;
+      margin-bottom: 18px;
+    }
+    .f04-challenge-gtext {
+      font-family: "Inter", sans-serif;
+      font-size: 40px;
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: -0.005em;
+      color: #7a9ab5;
+      white-space: pre-wrap;
+    }
+    .f04-challenge-gtext-big {
+      font-size: 48px;
+      font-weight: 600;
+      line-height: 1.26;
+      letter-spacing: -0.012em;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="04-challenge"
+    data-start="0"
+    data-duration="7.86"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- ground -->
+    <div
+      class="clip f04-challenge-bg"
+      data-start="0"
+      data-duration="7.86"
+      data-track-index="0"
+    >
+      <div class="f04-challenge-grid" id="f04-challenge-grid"></div>
+      <div class="f04-challenge-vign"></div>
+    </div>
+
+    <!-- the challenge body -->
+    <div
+      class="clip f04-challenge-panel"
+      id="f04-challenge-panel"
+      data-start="0"
+      data-duration="7.86"
+      data-track-index="1"
+    >
+      <div class="f04-challenge-bar">
+        <div class="f04-challenge-fname">challenge.json</div>
+        <div class="f04-challenge-mime">application/json</div>
+      </div>
+
+      <div class="f04-challenge-code">
+        <div class="f04-challenge-glow" id="f04-challenge-glow"></div>
+
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">01</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">{</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">02</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">  </span><span class="f04-challenge-k">"x402Version"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">2</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">03</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">  </span><span class="f04-challenge-k">"error"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">"Payment required"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">04</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">  </span><span class="f04-challenge-k">"accepts"</span><span class="f04-challenge-p">: [{</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">05</span><svg class="f04-challenge-hair" id="f04-challenge-hair-scheme" viewBox="0 0 3 29" xmlns="http://www.w3.org/2000/svg"><path id="f04-challenge-barpath-scheme" d="M 1.5 0 L 1.5 29" /></svg><span class="f04-challenge-jl-text" id="f04-challenge-t-scheme"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"scheme"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v" id="f04-challenge-v-scheme">"exact"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">06</span><svg class="f04-challenge-hair" id="f04-challenge-hair-network" viewBox="0 0 3 29" xmlns="http://www.w3.org/2000/svg"><path id="f04-challenge-barpath-network" d="M 1.5 0 L 1.5 29" /></svg><span class="f04-challenge-jl-text" id="f04-challenge-t-network"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"network"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v" id="f04-challenge-v-network">"hedera:testnet"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">07</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"amount"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">"500000"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">08</span><svg class="f04-challenge-hair" id="f04-challenge-hair-asset" viewBox="0 0 3 29" xmlns="http://www.w3.org/2000/svg"><path id="f04-challenge-barpath-asset" d="M 1.5 0 L 1.5 29" /></svg><span class="f04-challenge-jl-text" id="f04-challenge-t-asset"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"asset"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v" id="f04-challenge-v-asset">"0.0.429274"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">09</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"payTo"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">"0.0.9847867"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">10</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"maxTimeoutSeconds"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">180</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">11</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">    </span><span class="f04-challenge-k">"extra"</span><span class="f04-challenge-p">: {</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">12</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">      </span><span class="f04-challenge-k">"symbol"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">"USDC"</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">13</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">      </span><span class="f04-challenge-k">"decimals"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v">6</span><span class="f04-challenge-p">,</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">14</span><svg class="f04-challenge-hair" id="f04-challenge-hair-fee" viewBox="0 0 3 29" xmlns="http://www.w3.org/2000/svg"><path id="f04-challenge-barpath-fee" d="M 1.5 0 L 1.5 29" /></svg><span class="f04-challenge-jl-text" id="f04-challenge-t-fee"><span class="f04-challenge-p">      </span><span class="f04-challenge-k">"feePayer"</span><span class="f04-challenge-p">: </span><span class="f04-challenge-v" id="f04-challenge-v-fee">"0.0.7162784"</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">15</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">    }</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">16</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">  }]</span></span></div>
+        <div class="f04-challenge-jl"><span class="f04-challenge-ln">17</span><span class="f04-challenge-jl-text"><span class="f04-challenge-p">}</span></span></div>
+      </div>
+    </div>
+
+    <!-- plain-English rail -->
+    <div
+      class="clip f04-challenge-rail"
+      data-start="0"
+      data-duration="7.86"
+      data-track-index="2"
+    >
+      <div class="f04-challenge-eyebrow" id="f04-challenge-eyebrow">
+        <span class="f04-challenge-spike">✱</span> In plain English
+      </div>
+      <div class="f04-challenge-rule-top" id="f04-challenge-rule-top"></div>
+
+      <div class="f04-challenge-gitem" id="f04-challenge-g-scheme">
+        <div class="f04-challenge-glabel">scheme</div>
+        <div class="f04-challenge-gtext" id="f04-challenge-gt-scheme">the exact-amount scheme</div>
+      </div>
+      <div class="f04-challenge-gitem" id="f04-challenge-g-network">
+        <div class="f04-challenge-glabel">network</div>
+        <div class="f04-challenge-gtext" id="f04-challenge-gt-network">settles on Hedera</div>
+      </div>
+      <div class="f04-challenge-gitem" id="f04-challenge-g-asset">
+        <div class="f04-challenge-glabel">asset</div>
+        <div class="f04-challenge-gtext" id="f04-challenge-gt-asset">Circle USDC</div>
+      </div>
+      <div class="f04-challenge-gitem" id="f04-challenge-g-fee">
+        <div class="f04-challenge-glabel">extra.feePayer</div>
+        <div class="f04-challenge-gtext f04-challenge-gtext-big" id="f04-challenge-gt-fee">the facilitator pays the fee — the agent spends no gas</div>
+      </div>
+
+      <div class="f04-challenge-rule-bot" id="f04-challenge-rule-bot"></div>
+      <div class="f04-challenge-foot" id="f04-challenge-foot">HTTP 402 — payment required</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var FID = "04-challenge";
+      var P = "f04-challenge-";
+      var g = function (s) {
+        return document.getElementById(P + s);
+      };
+
+      var DUR = 7.86;
+      var DIM = 0.5;
+      var CYAN = "#0DCCFF";
+      var MUTED = "#7A9AB5";
+
+      var KEYS = ["scheme", "network", "asset", "fee"];
+
+      /* ── svg-path-draw setup: measured geometry, never a magic number ── */
+      KEYS.forEach(function (k) {
+        var path = g("barpath-" + k);
+        var len = path.getTotalLength() || 29;
+        path.style.strokeDasharray = String(len);
+        path.style.strokeDashoffset = String(len);
+      });
+
+      /* ── typing: split each gloss into per-character spans ── */
+      function split(el) {
+        var text = el.textContent;
+        el.textContent = "";
+        var out = [];
+        for (var i = 0; i < text.length; i++) {
+          var s = document.createElement("span");
+          s.textContent = text.charAt(i);
+          el.appendChild(s);
+          out.push(s);
+        }
+        return out;
+      }
+      var chars = {};
+      KEYS.forEach(function (k) {
+        chars[k] = split(g("gt-" + k));
+      });
+
+      var lineTexts = document.querySelectorAll("." + P + "jl-text");
+
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* ── macro camera: a slow, continuous drift underneath everything ── */
+      tl.fromTo(
+        g("grid"),
+        { x: 0, y: 0 },
+        { x: -26, y: -14, duration: DUR, ease: "none" },
+        0
+      );
+      tl.fromTo(
+        g("panel"),
+        { y: 0 },
+        { y: -7, duration: DUR, ease: "none" },
+        0
+      );
+
+      /* ══ Scene 1 (0.0–1.1s) — the real challenge body fades up, complete and dim ══ */
+      tl.fromTo(
+        g("panel"),
+        { opacity: 0 },
+        { opacity: 1, duration: 0.40, ease: "power2.out" },
+        0
+      );
+      tl.fromTo(
+        lineTexts,
+        { opacity: 0, y: 10 },
+        {
+          opacity: DIM,
+          y: 0,
+          duration: 0.46,
+          ease: "power2.out",
+          stagger: 0.018,
+        },
+        0.10
+      );
+      tl.fromTo(
+        g("rule-top"),
+        { opacity: 1, scaleX: 0 },
+        { scaleX: 1, duration: 0.55, ease: "power2.out" },
+        0.34
+      );
+      tl.fromTo(
+        g("eyebrow"),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.40, ease: "power2.out" },
+        0.46
+      );
+      tl.fromTo(
+        g("rule-bot"),
+        { opacity: 1, scaleX: 0 },
+        { scaleX: 1, duration: 0.55, ease: "power2.out" },
+        0.52
+      );
+      tl.fromTo(
+        g("foot"),
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.40, ease: "power2.out" },
+        0.66
+      );
+
+      /* ══ Scenes 2–5 — four cause→effect couplets, one per spoken cue ══
+         cause: the VO names a field → that line lifts, a cyan hairline draws
+                down its left edge (svg-path-draw)
+         effect: the plain-English gloss types into the right rail            */
+      var STEPS = [
+        { k: "scheme", lift: 1.06, gloss: 1.16, type: 1.28, typeDur: 0.42 },
+        { k: "network", lift: 2.95, gloss: 3.01, type: 3.13, typeDur: 0.34 },
+        { k: "asset", lift: 4.14, gloss: 4.20, type: 4.32, typeDur: 0.26 },
+        { k: "fee", lift: 4.90, gloss: 5.00, type: 5.14, typeDur: 0.88 },
+      ];
+      var RELEASE = [2.83, 4.02, 4.78];
+      var GLOSS_OUT = [2.79, 3.98, 4.74];
+
+      STEPS.forEach(function (s, i) {
+        /* release the previous highlight first — only ONE cyan at a time */
+        if (i > 0) {
+          var prev = STEPS[i - 1].k;
+          var rAt = RELEASE[i - 1];
+          tl.to(
+            g("t-" + prev),
+            { opacity: DIM, duration: 0.26, ease: "power1.inOut" },
+            rAt
+          );
+          tl.to(
+            g("v-" + prev),
+            { color: MUTED, duration: 0.26, ease: "power1.inOut" },
+            rAt
+          );
+          tl.to(
+            g("hair-" + prev),
+            { opacity: 0, duration: 0.22, ease: "power1.in" },
+            rAt
+          );
+          /* the rail gloss cuts out just ahead of the next one */
+          tl.to(
+            g("g-" + prev),
+            { opacity: 0, y: -14, duration: 0.18, ease: "power1.in" },
+            GLOSS_OUT[i - 1]
+          );
+        }
+
+        /* cause — the line lifts to full white with a cyan hairline drawn down its left edge */
+        tl.to(
+          g("barpath-" + s.k),
+          { strokeDashoffset: 0, duration: 0.44, ease: "power2.out" },
+          s.lift - 0.02
+        );
+        tl.fromTo(
+          g("hair-" + s.k),
+          { opacity: 1 },
+          { opacity: 1, duration: 0.01, ease: "none" },
+          s.lift - 0.02
+        );
+        tl.to(
+          g("t-" + s.k),
+          { opacity: 1, duration: 0.28, ease: "power2.out" },
+          s.lift
+        );
+        /* the VALUE takes the cyan, not the key */
+        tl.to(
+          g("v-" + s.k),
+          { color: CYAN, duration: 0.30, ease: "power1.out" },
+          s.lift + 0.04
+        );
+
+        /* effect — the gloss types into the rail */
+        tl.fromTo(
+          g("g-" + s.k),
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.36, ease: "power2.out" },
+          s.gloss
+        );
+        tl.fromTo(
+          chars[s.k],
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.05,
+            ease: "none",
+            stagger: s.typeDur / chars[s.k].length,
+          },
+          s.type
+        );
+      });
+
+      /* ══ Scene 5 payoff — a single ambient-glow-bloom behind the feePayer line,
+            landing with the line's settle, then decaying and holding lit ══ */
+      tl.fromTo(
+        g("glow"),
+        { opacity: 0, scale: 0.86 },
+        { opacity: 0.3, scale: 1, duration: 0.62, ease: "power2.out" },
+        4.82
+      );
+      tl.to(
+        g("glow"),
+        { opacity: 0.15, duration: 1.05, ease: "power1.out" },
+        5.46
+      );
+
+      window.__timelines[FID] = tl;
+    })();
+  </script>
+</template>

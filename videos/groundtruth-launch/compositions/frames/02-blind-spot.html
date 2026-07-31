@@ -1,0 +1,432 @@
+<template>
+  <!--
+    Frame 02 — The blind spot (HOOK, 5.696s)
+
+    Scene 1 (0.0–1.5s)  caret blinking, then line 1 types on PER PHRASE (discrete-text-sequence)
+    Scene 2 (1.5–3.2s)  genuine held pause — only the grid drift and the caret move
+    Scene 3 (3.2–4.6s)  line 2 drops in per word; "open" arrives in #0DCCFF and blooms once
+                        (asr-keyword-glow, karaoke variation) — the accent's FIRST appearance
+    Scene 4 (4.6–5.696s) HOLD — line 1 dims to #3A5269, the cyan "open" stays lit
+
+    Fonts: the project ships no font files (capture/extracted/fonts-manifest.json is empty and
+    both assets/fonts/ and capture/assets/fonts/ are empty), so the brand family is declared with
+    local() sources only — no fabricated asset URL — behind a grotesque fallback stack.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+  <style>
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+
+    /* root is styled by #root — never by a class on the data-composition-id element */
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "Bricolage Grotesque", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── full-bleed ground: its OWN clip layer, never a background on #root ───── */
+    .blindspot-bg {
+      position: absolute;
+      inset: 0;
+      background-color: #04060a;
+      overflow: hidden;
+    }
+    .blindspot-bg-grid {
+      position: absolute;
+      inset: -140px;
+      background-image: radial-gradient(
+        circle,
+        rgba(13, 204, 255, 0.1) 1.6px,
+        rgba(13, 204, 255, 0) 1.8px
+      );
+      background-size: 48px 48px;
+    }
+    .blindspot-bg-vignette {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(
+          128% 108% at 24% 44%,
+          rgba(4, 6, 10, 0) 0%,
+          rgba(4, 6, 10, 0.42) 58%,
+          rgba(4, 6, 10, 0.82) 100%
+        );
+    }
+
+    /* ── the type column's hairline (section-rule) ────────────────────────────── */
+    .blindspot-rule {
+      position: absolute;
+      left: 136px;
+      top: 240px;
+      width: 1px;
+      height: 460px;
+      background: #1c2a3a;
+      transform-origin: 50% 0%;
+    }
+
+    /* ── line 1 — display, left-set on the type column ────────────────────────── */
+    .blindspot-l1 {
+      position: absolute;
+      left: 200px;
+      top: 268px;
+      width: 1200px;
+      color: #edf2f7;
+      font-weight: 800;
+      font-size: 5.1cqw; /* ~98px @1920 */
+      line-height: 1.02;
+      letter-spacing: -0.022em;
+    }
+    .blindspot-row {
+      display: flex;
+      align-items: baseline;
+      height: 104px;
+      white-space: pre;
+    }
+    .blindspot-caret {
+      display: inline-block;
+      width: 0.085em;
+      height: 0.8em;
+      margin-left: 0.08em;
+      background-color: currentColor;
+      opacity: 0;
+    }
+
+    /* ── line 2 — the turn ────────────────────────────────────────────────────── */
+    .blindspot-l2 {
+      position: absolute;
+      left: 200px;
+      top: 540px;
+      width: 1200px;
+      color: #7a9ab5;
+      font-weight: 800;
+      font-size: 2.9cqw; /* ~56px @1920 */
+      line-height: 1.32;
+      letter-spacing: -0.014em;
+    }
+    .blindspot-l2row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: nowrap;
+      gap: 0.3em;
+      height: 74px;
+    }
+    /* entrance wrapper — GSAP owns this transform */
+    .blindspot-w {
+      display: inline-block;
+      position: relative;
+    }
+    /* envelope target — the glow driver owns this transform, never GSAP */
+    .blindspot-word {
+      display: inline-block;
+      position: relative;
+      z-index: 1;
+      transform-origin: 50% 50%;
+      text-shadow: 0 0 0 rgba(13, 204, 255, 0);
+    }
+    .blindspot-accent {
+      color: #0dccff;
+    }
+    .blindspot-period {
+      position: relative;
+      z-index: 1;
+      color: #7a9ab5;
+    }
+    /* the single voltage bloom — decays to a residual halo, never re-fires */
+    .blindspot-bloom {
+      position: absolute;
+      left: -74px;
+      right: -74px;
+      top: -60px;
+      bottom: -60px;
+      border-radius: 50%;
+      background: radial-gradient(
+        closest-side,
+        rgba(13, 204, 255, 0.4) 0%,
+        rgba(13, 204, 255, 0.13) 46%,
+        rgba(13, 204, 255, 0) 74%
+      );
+      opacity: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="02-blind-spot"
+    data-start="0"
+    data-duration="6.096"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- track 0 — full-bleed ground (its own clip, full-frame timing) -->
+    <div
+      class="clip blindspot-bg"
+      data-start="0"
+      data-duration="6.096"
+      data-track-index="0"
+    >
+      <div class="blindspot-bg-grid" id="blindspot-grid"></div>
+      <div class="blindspot-bg-vignette"></div>
+    </div>
+
+    <!-- track 1 — the type column's hairline -->
+    <div
+      class="clip blindspot-rule"
+      id="blindspot-rule"
+      data-start="0"
+      data-duration="6.096"
+      data-track-index="1"
+    ></div>
+
+    <!-- track 2 — line 1, typed on per phrase -->
+    <div
+      class="clip blindspot-l1"
+      id="blindspot-l1"
+      data-start="0"
+      data-duration="6.096"
+      data-track-index="2"
+    >
+      <div class="blindspot-row"><span id="blindspot-rowA"></span
+        ><span class="blindspot-caret" id="blindspot-caretA"></span></div>
+      <div class="blindspot-row"><span id="blindspot-rowB"></span
+        ><span class="blindspot-caret" id="blindspot-caretB"></span></div>
+    </div>
+
+    <!-- track 3 — line 2, the turn -->
+    <div
+      class="clip blindspot-l2"
+      id="blindspot-l2"
+      data-start="0"
+      data-duration="6.096"
+      data-track-index="3"
+    >
+      <div class="blindspot-l2row">
+        <span class="blindspot-w"><span class="blindspot-word" data-word="it">It</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="still">still</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="cant">can't</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="tell">tell</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="you">you</span></span>
+      </div>
+      <div class="blindspot-l2row">
+        <span class="blindspot-w"><span class="blindspot-word" data-word="if">if</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="this">this</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="shop">shop</span></span>
+        <span class="blindspot-w"><span class="blindspot-word" data-word="is">is</span></span>
+        <span class="blindspot-w"
+          ><span class="blindspot-bloom" id="blindspot-bloom"></span
+          ><span class="blindspot-word blindspot-accent" data-word="open">open</span
+          ><span class="blindspot-period">.</span></span
+        >
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var DUR = 5.696;
+      var root = document.querySelector('[data-composition-id="02-blind-spot"]');
+
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* ── ground: a very slow grid drift, transform-only ───────────────────── */
+      tl.fromTo(
+        "#blindspot-grid",
+        { x: 0, y: 0 },
+        { x: -26, y: -17, duration: DUR, ease: "none" },
+        0,
+      );
+
+      /* ── the type column's hairline draws down ────────────────────────────── */
+      /* seek-safe: pin the pre-entrance state at 0 so a seek before the tween
+         doesn't render the natural (already-visible) state */
+      tl.set("#blindspot-rule", { scaleY: 0, opacity: 0 }, 0);
+      tl.fromTo(
+        "#blindspot-rule",
+        { scaleY: 0, opacity: 0 },
+        { scaleY: 1, opacity: 1, duration: 0.7, ease: "power2.out" },
+        0.1,
+      );
+
+      /* ══ SCENE 1 — discrete-text-sequence, PER PHRASE (never per letter) ═════
+         Each entry shows from its t until the next entry's t; the jump is instant.
+         The caret rides the end of the active row, so no min-width clamp here —
+         the growing right edge IS the typing. */
+      var SEQ_A = [
+        { t: 0.0, text: "" },
+        { t: 0.2, text: "Your" },
+        { t: 0.38, text: "Your AI" },
+        { t: 0.58, text: "Your AI has" },
+        { t: 0.8, text: "Your AI has read" },
+      ];
+      var SEQ_B = [
+        { t: 0.0, text: "" },
+        { t: 1.02, text: "the" },
+        { t: 1.2, text: "the entire" },
+        { t: 1.46, text: "the entire internet." },
+      ];
+      var ROW_B_START = 1.02; /* the caret hands off from row A to row B here */
+      var BLINK_PERIOD = 0.56;
+
+      function textAt(seq, time) {
+        for (var i = seq.length - 1; i >= 0; i--) {
+          if (time >= seq[i].t) return seq[i].text;
+        }
+        return "";
+      }
+
+      var rowA = document.getElementById("blindspot-rowA");
+      var rowB = document.getElementById("blindspot-rowB");
+      var caretA = document.getElementById("blindspot-caretA");
+      var caretB = document.getElementById("blindspot-caretB");
+
+      var typeDriver = { t: 0 };
+      tl.to(
+        typeDriver,
+        {
+          t: DUR,
+          duration: DUR,
+          ease: "none",
+          onUpdate: function () {
+            var t = typeDriver.t;
+            rowA.textContent = textAt(SEQ_A, t);
+            rowB.textContent = textAt(SEQ_B, t);
+            /* deterministic square-wave blink on the timeline, never CSS */
+            var on = Math.sin((t / BLINK_PERIOD) * Math.PI * 2) > 0 ? "1" : "0";
+            var onRowB = t >= ROW_B_START;
+            caretA.style.opacity = onRowB ? "0" : on;
+            caretB.style.opacity = onRowB ? on : "0";
+          },
+        },
+        0,
+      );
+
+      /* ══ SCENE 3 — line 2 drops in, word by word ════════════════════════════ */
+      var wraps = root.querySelectorAll(".blindspot-w");
+      /* seek-safe: line 2 is held out of the frame until its cue */
+      tl.set(wraps, { y: -24, opacity: 0 }, 0);
+      for (var i = 0; i < wraps.length; i++) {
+        tl.fromTo(
+          wraps[i],
+          { y: -24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.38, ease: "power3.out" },
+          3.2 + i * 0.075,
+        );
+      }
+
+      /* ══ asr-keyword-glow (karaoke variation) ═══════════════════════════════
+         One linear driver sweeping scene time, looping ALL words — never one
+         tween per word. Windows are monotonic and non-overlapping; "open" holds
+         a window ~2x a normal word, then decays to a residual halo and stays lit. */
+      var ATTACK = 0.1;
+      var RELEASE = 0.55;
+      var REST = 0.1;
+      var REST_ACCENT = 0.18;
+      var MAX_BLUR = 40;
+      var MAX_SCALE = 0.15;
+      var MAX_SCALE_ACCENT = 0.14;
+
+      var TIMINGS = {
+        it: { start: 3.28, end: 3.4 },
+        still: { start: 3.42, end: 3.54 },
+        cant: { start: 3.56, end: 3.68 },
+        tell: { start: 3.7, end: 3.82 },
+        you: { start: 3.84, end: 3.96 },
+        if: { start: 3.98, end: 4.1 },
+        this: { start: 4.12, end: 4.24 },
+        shop: { start: 4.26, end: 4.38 },
+        is: { start: 4.4, end: 4.52 },
+        open: { start: 4.54, end: 4.78 },
+      };
+
+      function envelope(time, start, end, rest) {
+        if (time < start) return 0;
+        if (time < end) return Math.min((time - start) / ATTACK, 1);
+        var releaseEnd = end + RELEASE;
+        if (time < releaseEnd) return 1 - ((time - end) / RELEASE) * (1 - rest);
+        return rest;
+      }
+
+      var REST_RGB = { r: 122, g: 154, b: 181 }; /* ink-muted #7A9AB5 */
+      var ACTIVE_RGB = { r: 237, g: 242, b: 247 }; /* ink #EDF2F7 */
+      function lerpCh(a, b, t) {
+        return Math.round(a + (b - a) * t);
+      }
+
+      var words = root.querySelectorAll(".blindspot-word");
+      var bloom = document.getElementById("blindspot-bloom");
+
+      var glowDriver = { t: 0 };
+      tl.to(
+        glowDriver,
+        {
+          t: DUR,
+          duration: DUR,
+          ease: "none", // linear — any other ease warps every word's envelope
+          onUpdate: function () {
+            var t = glowDriver.t;
+            for (var j = 0; j < words.length; j++) {
+              var el = words[j];
+              var timing = TIMINGS[el.dataset.word];
+              if (!timing) continue;
+              var accent = el.classList.contains("blindspot-accent");
+              var env = envelope(
+                t,
+                timing.start,
+                timing.end,
+                accent ? REST_ACCENT : REST,
+              );
+              if (accent) {
+                /* the accent's colour is fixed cyan from arrival — only the
+                   glow blooms and decays, so the word stays lit on the hold */
+                el.style.textShadow =
+                  "0 0 " +
+                  (MAX_BLUR * env).toFixed(2) +
+                  "px rgba(13,204,255," +
+                  (0.72 * env).toFixed(3) +
+                  ")";
+                el.style.transform = "scale(" + (1 + MAX_SCALE_ACCENT * env) + ")";
+                bloom.style.opacity = env.toFixed(3);
+              } else {
+                el.style.color =
+                  "rgb(" +
+                  lerpCh(REST_RGB.r, ACTIVE_RGB.r, env) +
+                  "," +
+                  lerpCh(REST_RGB.g, ACTIVE_RGB.g, env) +
+                  "," +
+                  lerpCh(REST_RGB.b, ACTIVE_RGB.b, env) +
+                  ")";
+                el.style.transform = "scale(" + (1 + MAX_SCALE * env * 0.4) + ")";
+              }
+            }
+          },
+        },
+        0,
+      );
+
+      /* ══ SCENE 4 — HOLD: line 1 recedes, the cyan "open" keeps the frame ════ */
+      tl.fromTo(
+        "#blindspot-l1",
+        { color: "#EDF2F7" },
+        { color: "#3A5269", duration: 0.6, ease: "power2.inOut" },
+        4.6,
+      );
+
+      window.__timelines["02-blind-spot"] = tl;
+    })();
+  </script>
+</template>

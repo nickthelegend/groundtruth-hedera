@@ -1,0 +1,291 @@
+<template>
+  <style>
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Bricolage Grotesque"; src: url("assets/fonts/BricolageGrotesque-ExtraBold.woff2") format("woff2"); font-weight: 800; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+    @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "Inter"; src: url("assets/fonts/Inter-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    /* 06b-held — the stillest frame. Pure continuation of Frame 6's end state.
+       Mono voice is set with CSS generic families only: no font file ships with
+       this project (assets/fonts is empty, capture/extracted/fonts-manifest.json
+       lists zero families), so naming a family here would silently fall back in
+       the headless render. ui-monospace/monospace keeps the indexical register. */
+
+    #root {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      container-type: size;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── full-bleed ground: its own clip layer, never a background on #root ── */
+    .f06b-held-ground {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      background-color: #04060a;
+      z-index: 0;
+    }
+
+    .f06b-held-grid,
+    .f06b-held-shimmer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      background-position: 0 0;
+    }
+
+    .f06b-held-grid {
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.1) 1.5px,
+        rgba(13, 204, 255, 0) 1.6px
+      );
+      background-size: 48px 48px;
+    }
+
+    /* ambient shimmer — the only thing alive after 0.9s, and barely */
+    .f06b-held-shimmer {
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.07) 1.5px,
+        rgba(13, 204, 255, 0) 1.6px
+      );
+      background-size: 48px 48px;
+      opacity: 0.3;
+    }
+
+    /* ── the rail ── */
+    .f06b-held-rail {
+      position: absolute;
+      left: 300px;
+      top: 520px;
+      width: 1320px;
+      height: 1px;
+      background-color: #1c2a3a;
+      z-index: 3;
+    }
+
+    /* ── account chips ── */
+    .f06b-held-chip {
+      position: absolute;
+      top: 446px;
+      width: 260px;
+      height: 148px;
+      padding: 20px 18px;
+      background-color: #0c1420;
+      border: 1px solid #1c2a3a;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+    }
+
+    .f06b-held-chip-1 { left: 290px; }
+    .f06b-held-chip-2 { left: 830px; }
+    .f06b-held-chip-3 { left: 1370px; }
+
+    .f06b-held-label {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 18px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .f06b-held-id {
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 30px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .f06b-held-muted { color: #7a9ab5; }
+    .f06b-held-accent { color: #0dccff; }
+
+    /* ── amounts sitting on the rail, breaking it in the chip gaps ── */
+    .f06b-held-amount {
+      position: absolute;
+      top: 505px;
+      width: 240px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: #7a9ab5;
+      z-index: 4;
+    }
+
+    .f06b-held-amount span {
+      background-color: #04060a;
+      padding: 0 16px;
+    }
+
+    .f06b-held-amount-1 { left: 570px; }
+    .f06b-held-amount-2 { left: 1110px; }
+
+    .f06b-held-amount b {
+      font-weight: 600;
+      color: #edf2f7;
+    }
+
+    /* ── explorer chrome ── */
+    .f06b-held-source {
+      position: absolute;
+      left: 0;
+      top: 686px;
+      width: 1920px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: #3a5269;
+      z-index: 4;
+    }
+
+    /* ── the value dot, landed at chip 3's centre ── */
+    .f06b-held-dot-glow {
+      position: absolute;
+      left: 1478px;
+      top: 498px;
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      background-image: radial-gradient(
+        circle at center,
+        rgba(13, 204, 255, 0.45) 0%,
+        rgba(13, 204, 255, 0) 68%
+      );
+      opacity: 0.42;
+      z-index: 5;
+    }
+
+    .f06b-held-dot {
+      position: absolute;
+      left: 1494px;
+      top: 514px;
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background-color: #0dccff;
+      z-index: 6;
+    }
+  </style>
+
+  <div
+    id="root"
+    data-composition-id="06b-held"
+    data-start="0"
+    data-duration="2.9"
+    data-width="1920"
+    data-height="1080"
+  >
+    <!-- ground -->
+    <div class="clip f06b-held-ground" data-start="0" data-duration="2.9" data-track-index="0">
+      <div class="f06b-held-grid"></div>
+      <div class="f06b-held-shimmer"></div>
+    </div>
+
+    <!-- chips -->
+    <div class="clip f06b-held-chip f06b-held-chip-1" data-start="0" data-duration="2.9" data-track-index="1">
+      <div class="f06b-held-label f06b-held-muted">Agent</div>
+      <div class="f06b-held-id f06b-held-muted">0.0.9847870</div>
+    </div>
+    <div class="clip f06b-held-chip f06b-held-chip-2" data-start="0" data-duration="2.9" data-track-index="2">
+      <div class="f06b-held-label f06b-held-muted">Treasury</div>
+      <div class="f06b-held-id f06b-held-muted">0.0.9847867</div>
+    </div>
+    <div class="clip f06b-held-chip f06b-held-chip-3" data-start="0" data-duration="2.9" data-track-index="3">
+      <div class="f06b-held-label f06b-held-accent">Oracle</div>
+      <div class="f06b-held-id f06b-held-accent">0.0.9860142</div>
+    </div>
+
+    <!-- rail, drawn through the chips -->
+    <div class="clip f06b-held-rail" data-start="0" data-duration="2.9" data-track-index="4"></div>
+
+    <!-- amounts on the rail -->
+    <div class="clip f06b-held-amount f06b-held-amount-1" data-start="0" data-duration="2.9" data-track-index="5">
+      <span><b>0.50</b> USDC</span>
+    </div>
+    <div class="clip f06b-held-amount f06b-held-amount-2" data-start="0" data-duration="2.9" data-track-index="6">
+      <span><b>0.44</b> USDC</span>
+    </div>
+
+    <!-- explorer source -->
+    <div class="clip f06b-held-source" data-start="0" data-duration="2.9" data-track-index="7">
+      hashscan.io/testnet
+    </div>
+
+    <!-- the value dot -->
+    <div class="clip f06b-held-dot-glow" data-start="0" data-duration="2.9" data-track-index="8"></div>
+    <div class="clip f06b-held-dot" data-start="0" data-duration="2.9" data-track-index="9"></div>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+
+      /* Scene 1 (0.0–0.9s) — the only motion in the frame.
+         Chip 3's hairline flashes once to the accent and decays back to #1C2A3A
+         while the value dot settles a few pixels along the rail. */
+      tl.fromTo(
+        ".f06b-held-chip-3",
+        { borderColor: "#1C2A3A" },
+        { borderColor: "#0DCCFF", duration: 0.24, ease: "power2.out" },
+        0
+      );
+      tl.to(
+        ".f06b-held-chip-3",
+        { borderColor: "#1C2A3A", duration: 0.66, ease: "power2.inOut" },
+        0.24
+      );
+
+      tl.fromTo(
+        ".f06b-held-dot",
+        { x: -7, scale: 1.14 },
+        { x: 0, scale: 1, duration: 0.72, ease: "power3.out" },
+        0
+      );
+      tl.fromTo(
+        ".f06b-held-dot-glow",
+        { opacity: 0.86, scale: 1.28 },
+        { opacity: 0.42, scale: 1, duration: 0.9, ease: "power2.out" },
+        0
+      );
+
+      /* Scene 2 (0.9–2.4s) — absolute hold. Only the dot grid breathes,
+         at very low amplitude, across the whole frame. */
+      tl.to(
+        ".f06b-held-shimmer",
+        {
+          keyframes: {
+            opacity: [0.3, 0.58, 0.34, 0.52, 0.31],
+            easeEach: "sine.inOut"
+          },
+          duration: 2.4
+        },
+        0
+      );
+
+      window.__timelines["06b-held"] = tl;
+    })();
+  </script>
+</template>

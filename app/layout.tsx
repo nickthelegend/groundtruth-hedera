@@ -5,6 +5,8 @@ import { Bricolage_Grotesque, JetBrains_Mono, Inter } from 'next/font/google'
 import './globals.css'
 import ThemeToggle from './theme-toggle'
 import { Logo } from './logo'
+import { Providers } from './providers'
+import { ConnectWallet } from './connect-wallet'
 
 // Bricolage Grotesque — friendly, characterful display face (not the usual
 // Inter/Space Grotesk default), keeps "easy for all" while standing out.
@@ -49,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className="min-h-screen"
         style={{ fontFamily: 'var(--font-body), Inter, sans-serif' }}
       >
+        <Providers>
         <nav
           className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-md"
           style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--bg) 82%, transparent)' }}
@@ -88,17 +91,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
               <ThemeToggle />
 
-              <Link
-                href="/tasks"
-                className="btn btn-primary ml-1.5 px-4 py-1.5 text-sm"
-              >
-                Earn USDC <span className="btn-arrow">→</span>
-              </Link>
+              <div className="ml-1.5">
+                <ConnectWallet compact />
+              </div>
             </div>
           </div>
         </nav>
 
         <div className="pt-16">{children}</div>
+        </Providers>
       </body>
     </html>
   )
