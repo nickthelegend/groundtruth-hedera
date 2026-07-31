@@ -13,6 +13,13 @@ import {
 } from '@/lib/hedera'
 import { toUnits, fromUnits } from '@/lib/money'
 
+// This route reads live database state on every request. Without an explicit
+// dynamic marker the App Router prerenders it at build time and serves that
+// build-time snapshot forever — in production the mission board came back empty
+// even with open tasks in Mongo.
+export const dynamic = 'force-dynamic'
+
+
 // Settlement is slow by nature: the facilitator submits to Hedera, then we poll
 // a public Mirror Node until consensus catches up. That routinely runs 15-25s,
 // well past Vercel's 10s default — and a truncated request here would abort

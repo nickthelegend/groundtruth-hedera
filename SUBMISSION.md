@@ -51,167 +51,109 @@ Three distinct accounts, so the money visibly moves agent → treasury → oracl
 paying itself.
 
 ---
+## The demo video — record this, in the browser
 
-## The 5-minute demo video
+**The product is a website.** A human oracle claims and completes missions in the web app;
+the *agent* side is an API because an agent is software — there is no UI for "an AI pays a
+bill". So the demo lives in the browser, and the agent appears exactly once: as the thing
+that makes a paid mission land on the board.
 
-Total: **4:40**, leaving buffer. Record in this order. Everything below has been rehearsed
-against the live deployment.
+**No curl.** The raw 402 challenge JSON is already rendered, legibly, in the launch video —
+it does not need to be typed on camera. Showing a terminal for four minutes would sell this
+as a CLI, which it isn't.
+
+Total: **3:00**. Shorter is easier to record and easier to watch.
 
 ### Before you hit record
 
-```bash
-# One terminal, in the repo
-cd groundtruth-hedera
-set -a && . ./.env.production.local && set +a
+Two windows, nothing else:
+
+- **A — browser**, three tabs already open: `/` · `/tasks` · `/pulse`
+- **B — an MCP client** (Claude Desktop) connected to
+  `https://groundtruth-hedera.vercel.app/api/mcp`
+
+Have the proof photo on your desktop, ready to drag. Do one full dry run first — the
+agent wallet `0.0.9847870` holds **15.10 USDC**, so at 0.50/task you get ~30 attempts.
+
+> **Fallback if the MCP client won't connect in time:** run `pnpm e2e` in a small terminal
+> for the 0:30–1:00 beat instead, then cut straight back to the browser. Same story, one
+> less moving part. Do not restructure the rest of the demo around it.
+
+### 0:00–0:30 — The landing page
+
+Scroll slowly. Stop on the line that already frames the whole product:
+
+> *"You don't post tasks by hand — your agent does."*
+
+### 0:30–1:00 — An AI hires a human
+
+In the MCP client, type a real question:
+
+> *Is the coffee shop on the corner open right now? Use GroundTruth.*
+
+The agent calls `human_do`, pays over x402 on Hedera, and returns a `task_id`. Let the tool
+result sit on screen — it shows `paid: true` and the payment transaction id. **That is the
+bounty criterion, shown by the product paying for itself rather than by a curl command.**
+
+> If the result ever says `created_unpaid_demo`, stop and re-record — that is the demo
+> bypass, and it means no funds moved.
+
+### 1:00–1:30 — The mission is live
+
+Cut to `/tasks`. The mission you just paid for is on the board with its **0.50 USDC**
+bounty. Claim it. This is the money shot: an AI spent real money and a human now has work.
+
+### 1:30–2:10 — A human does it
+
+On the mission page: read the per-task **freshness code**, drag in the proof photo, submit.
+Stay on the verifying state until the notary returns — it quotes the freshness code back in
+its verdict. That sentence is what makes the proof non-fakeable; let it be read.
+
+### 2:10–2:35 — Money moved
+
+Cut to `/pulse`. Payment, payout and proof-anchor all land on the live feed. Say the split
+out loud: **0.50 in, 0.44 to the oracle, 12% platform fee.**
+
+### 2:35–3:00 — Anyone can check it
+
+Open HashScan on the payment tx, the payout tx, and the HCS topic `0.0.9847942`. Close on
+the topic — every verified proof is anchored to public consensus.
+
+---
+
+### Narration — edit here, then TTS
+
+One line per beat. Calm and flat; do not sell.
+
+```text
+[0:00] GroundTruth is a marketplace where AI agents pay humans to verify the physical world.
+[0:12] Agents don't post work by hand. They discover it over MCP and pay for it over x402.
+[0:30] So let's ask one. This is a normal assistant, connected to GroundTruth.
+[0:44] It priced the job, paid half a dollar of USDC on Hedera, and got back a task id. No gas.
+[1:00] That payment put a real mission on the board.
+[1:12] Any human can claim it. This one is worth forty-four cents to whoever does it.
+[1:30] Every task carries a freshness code. The proof has to show it.
+[1:50] The notary reads the photo and quotes the code back. A stock photo cannot pass.
+[2:10] Payment in, payout out, proof anchored to consensus.
+[2:22] Fifty cents in. Forty-four to the oracle. A twelve percent platform fee.
+[2:35] None of this is a screenshot. Every hop is a real transaction on Hedera testnet.
+[2:50] And every verified proof is anchored to a public topic. Anyone can audit it.
 ```
 
-Open these tabs:
-1. https://groundtruth-hedera.vercel.app
-2. https://hashscan.io/testnet/topic/0.0.9847942
-3. A terminal, font size up.
+### If something breaks on camera
 
-Check the agent still has USDC — each run costs 0.50:
+- **Mission already claimed** — you left a dry run open. Post a new one; it takes 20 seconds.
+- **Notary is rate-limited (429)** — turn it into a feature: *"the model was rate-limited, so
+  the notary abstained and the task waits for the agent to decide. It never auto-pays
+  something it couldn't verify."*
+- **The tool result says `created_unpaid_demo`** — the x402 payment failed and the bypass
+  caught it. Check the agent wallet balance before re-recording.
 
-```bash
-curl -s "https://groundtruth-hedera.vercel.app/api/faucet?account=0.0.9847870" | python3 -m json.tool
-```
+### The longer 4:40 cut, if you want it
 
----
-
-### 0:00–0:35 — The problem (landing page)
-
-Open **https://groundtruth-hedera.vercel.app**.
-
-> "AI agents can read the entire internet. They still can't tell you if this shop is open right
-> now, what's actually on the shelf, or whether the queue is out the door. They can't walk
-> outside."
-
-Scroll to **How it works**. Point at the five steps.
-
-> "GroundTruth is the missing API call. An agent posts a task and pays for it in the same HTTP
-> round-trip. A human goes and looks. An AI notary checks the proof actually matches what was
-> asked. The human gets paid — all on Hedera, in about a minute."
-
-Scroll to the hero stats: the price, ~3s finality, ~$0.001 fee.
-
----
-
-### 0:35–1:10 — The 402 handshake (this is the bounty)
-
-Terminal:
-
-```bash
-curl -s https://groundtruth-hedera.vercel.app/api/v1/human-do | python3 -m json.tool
-```
-
-> "This is the whole protocol in one response. An unpaid request gets HTTP 402 and the exact
-> payment requirements: the `exact` scheme, `hedera:testnet`, the price in atomic units, USDC
-> token `0.0.429274`, and the account to pay."
-
-Point at `extra.feePayer`.
-
-> "And that — the facilitator's fee payer — is the part that makes this Hedera and not EVM. The
-> agent signs a real Hedera transfer. The facilitator co-signs as fee payer and submits it. So a
-> paying agent needs USDC and **no gas at all**, and we — the resource server — hold no key on
-> the payment path. We only ever see a signed transaction."
-
----
-
-### 1:10–2:40 — The full loop, live (the money shot)
-
-```bash
-pnpm e2e
-```
-
-Talk over it as the eight steps print:
-
-- **[1] signs** — "The agent fetches that 402 and signs a Hedera transfer for exactly the price."
-- **[2] task created** — "Payment settled. That's a real transaction id."
-- **[3] mirror confirms** — "We don't take the facilitator's word for it. We re-read the transfer
-  list from a public Mirror Node before creating anything. Three gates, all fail-closed."
-- **[4] claimed** — "A human oracle picks it up."
-- **[5] proof + notary** — *pause here.* "Every task carries a per-task freshness code. The proof
-  has to contain it, so a stock photo can't pass. Watch — the vision model read the code back."
-  Read the notary line aloud; it quotes the actual code.
-- **[6] auto-accepted** — "No human in the loop."
-- **[7] paid + anchored** — "Oracle paid in USDC. Proof hash anchored to HCS."
-- **[8] deliverable** — "And the agent downloads the photo it paid for. The same URL without a
-  signature is refused — proofs aren't public."
-
-Then click the **payment** and **payout** links it printed. Show both on HashScan.
-
-> "Two different accounts. Agent paid the treasury, treasury paid the oracle."
-
----
-
-### 2:40–3:20 — The proof is public and independent
-
-Switch to the **HCS topic tab** and refresh:
-https://hashscan.io/testnet/topic/0.0.9847942
-
-> "Every verified task writes its proof hash, the intent hash and the notary's verdict to this
-> topic. That's a consensus-timestamped audit trail anyone can replay from a public Mirror Node —
-> it doesn't depend on our database, or on us being honest, or on us still being online."
-
-Point at the newest sequence number matching the run.
-
----
-
-### 3:20–4:10 — It's actually tested
-
-```bash
-pnpm test
-```
-
-> "132 offline assertions in under a second. No network, no keys — API routes run against an
-> in-memory fake that reimplements the real database constraints."
-
-Then:
-
-```bash
-pnpm test:db
-```
-
-> "27 against the real database. The two that matter: ten concurrent claims on one task and
-> exactly one wins, and a settled transaction refusing to pay twice even under a freshly invented
-> payment reference. Those are database constraints, not application checks — an application
-> check would race."
-
-> "243 assertions in total. 111 of them run against live Hedera, live MongoDB and the deployed
-> app. Full verbatim output is in `docs/VERIFICATION.md`."
-
----
-
-### 4:10–4:40 — Close on the honesty
-
-> "One thing I'd point at. We ran an adversarial audit of our own README against the code — nine
-> judges, each told to *refute* claims rather than confirm them. They flagged 92 of 132 claims.
-> Most were wording. Three were security bugs: a credential leaking from a public endpoint, a
-> duplicate-proof check that had never once fired, and a caller being able to set their own
-> price. All three are fixed and covered by tests."
-
-> "`docs/VERIFICATION.md` documents all ten silent bugs we found — including two that only
-> surfaced *after* deploying. It's verbatim output, not a summary. If a line isn't in the
-> terminal, it isn't in the doc."
-
-End on the landing page.
-
----
-
-## If something breaks on camera
-
-| Symptom | Cause | Do this |
-|---|---|---|
-| `agent holds X but needs 0.50` | Agent out of USDC | Send USDC to `0.0.9847870`, or lower `ASP_PRICE_USDT` |
-| Notary says `uncertain (vision unavailable HTTP 429)` | Groq free-tier rate limit | Wait 60s and re-run. The task is *held*, not failed — say so, it's the fail-closed path working |
-| `status: submitted` instead of `verified` | Same as above | Point out this is correct: an unverifiable proof never auto-pays |
-| `Task is not awaiting review` | Previous run left state | Just run `pnpm e2e` again — each run creates a fresh task |
-
-**Turn the 429 into a feature if it happens.** "The model was rate-limited, so the notary
-abstained and the task is waiting for the agent to decide. It never auto-pays something it
-couldn't verify."
-
----
+Keep everything above, then append: `pnpm test` and `pnpm test:db` (3:00–3:50), and close on
+the adversarial audit (3:50–4:40). Only do this if you have time to spare — the 3:00 cut is
+the stronger submission.
 
 ## Bounty checklist
 

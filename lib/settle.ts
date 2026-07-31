@@ -10,7 +10,7 @@ import {
 } from './hedera'
 import { anchorProof, type ProofAnchor } from './hcs'
 import { transition, bumpWorker, getTask } from './db'
-import { splitBudget, fromUnits } from './money'
+import { splitBudget, fromUnits, toUnits } from './money'
 import type { TaskResult } from './types'
 
 // ── Worker settlement on Hedera ───────────────────────────────────────────────
@@ -89,7 +89,14 @@ export async function settleTask(
     return { success: false, error: `invalid_worker_account: ${workerAccount}` }
   }
 
-  const { payoutUnits, feeUnits } = splitBudget(budget ?? task.budget_usdt ?? PRICE, FEE_BPS)
+  // The 402 challenge always charges the list price, so a caller-declared
+  // `budget_usdt` above it is a ceiling that was never actually paid. Splitting
+  // the declared budget would pay the oracle out of money the treasury never
+  // received (0.50 in, 1.76 out at the old MCP default). Settle on whichever is
+  // smaller — the declared budget or the price actually charged.
+  const declared = budget ?? task.budget_usdt ?? PRICE
+  const basis = toUnits(declared) < toUnits(PRICE) ? declared : PRICE
+  const { payoutUnits, feeUnits } = splitBudget(basis, FEE_BPS)
 
   // HTS tokens cannot be sent to an account that has not associated them. Check
   // first so the worker gets a clear instruction instead of an opaque

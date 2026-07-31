@@ -68,13 +68,18 @@ const handler = createMcpHandler(
           intent: z.string().min(1).max(500).describe('What you want the human to do'),
           proof_type: z.enum(['photo', 'form']).describe('Type of proof'),
           instructions: z.string().min(1).max(1000).describe('Detailed instructions for the human'),
-          budget_usdt: z.string().regex(/^\d+(\.\d{1,6})?$/).optional().default('2.00'),
+          budget_usdt: z
+            .string()
+            .regex(/^\d+(\.\d{1,6})?$/)
+            .optional()
+            .default(process.env.ASP_PRICE_USDT ?? '2.00')
+            .describe('Defaults to the service list price. The 402 challenge sets what is actually charged.'),
           timeout_seconds: z.number().int().min(60).max(86400).optional().default(3600),
         },
       },
       async ({ intent, proof_type, instructions, budget_usdt, timeout_seconds }: { intent: string; proof_type: 'photo' | 'form'; instructions: string; budget_usdt?: string; timeout_seconds?: number }) => {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-        const amount = budget_usdt ?? '2.00'
+        const amount = budget_usdt ?? process.env.ASP_PRICE_USDT ?? '2.00'
 
         // Step 1: Autonomous x402 payment on Hedera — associate the token if
         // needed, check balance, fetch the 402 challenge, sign a real Hedera
