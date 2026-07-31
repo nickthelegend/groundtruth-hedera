@@ -15,8 +15,8 @@ Built for the **[Hedera x402 Bounty](https://hedera.com/x402-bounty/)**.
 
 | | |
 |---|---|
-| x402 payment settled | [`0.0.7162784@1785524910.807306689`](https://hashscan.io/testnet/transaction/0.0.7162784@1785524910.807306689) |
-| Oracle payout | [`0.0.9847867@1785524943.299405326`](https://hashscan.io/testnet/transaction/0.0.9847867@1785524943.299405326) |
+| x402 payment settled | [`0.0.7162784@1785533088.095593612`](https://hashscan.io/testnet/transaction/0.0.7162784@1785533088.095593612) |
+| Oracle payout | [`0.0.9847867@1785533108.731142427`](https://hashscan.io/testnet/transaction/0.0.9847867@1785533108.731142427) |
 | Proof anchored to HCS | [topic `0.0.9847942`](https://hashscan.io/testnet/topic/0.0.9847942) |
 
 Three distinct accounts — agent [`0.0.9847870`](https://hashscan.io/testnet/account/0.0.9847870)
@@ -54,6 +54,7 @@ This is not an EVM app pointed at a Hedera RPC. Every on-chain surface uses a fi
 | **Payment** | x402 `exact` scheme, `hedera:testnet`, Circle USDC (`0.0.429274`) | The payer signs a real `TransferTransaction`; the facilitator co-signs as **fee payer** and submits. As the resource server GroundTruth holds **no key** — it only ever sees a signed transaction. |
 | **Payout** | Native HTS `TransferTransaction` to the oracle's account | No payroll contract, no allowance dance, no approve-then-`transferFrom` round trip. One transaction, final in seconds, for [Hedera's published](https://hedera.com/fees) ~$0.001 HTS transfer fee — paid by the treasury. |
 | **Proof integrity** | Proof hash + intent hash + verdict written to an **HCS topic** on every payout | Immutable, consensus-timestamped record anyone can replay from a public Mirror Node, independent of our database. Anchoring is best-effort and happens after payout, so a topic outage never costs a worker money — and rejected proofs are not anchored. |
+| **Oracle identity** | **HashPack** over WalletConnect returns a native `0.0.x` account id | An EVM wallet would hand back a `0x…` address, which is not what an HTS transfer pays. Connecting a Hedera wallet skips the translation entirely — and because HTS refuses to deliver a token to an account that has not associated it, the app checks association on connect and offers it as one signature, rather than letting an oracle discover it after the work is done. |
 | **Verification** | Public **Mirror Node** transfer-list lookup | We never take the facilitator's word that a payment settled — we re-read the transaction's transfer list from a public Mirror Node, a source independent of the facilitator, before believing it. |
 
 ### Why x402 on Hedera changes the shape of the code
@@ -100,6 +101,23 @@ A confident mismatch is rejected with no payout. When the model **runs but is un
 With a vision key configured this runs fully autonomously: `pnpm e2e` submits a generated photo carrying that task's freshness code, the model reads the code back, and the payout fires with no human in the loop. Without a key the notary abstains and the task is held — safe, just not autonomous.
 
 The freshness gate for *form* proofs is a deterministic string match performed **before** any model call, so a missing code is a hard reject even when every AI provider is down.
+
+---
+
+## The human side
+
+The agent path is an API; the oracle path is a website.
+
+1. **Connect** — HashPack over WalletConnect, or paste a `0.0.x` account id. If the
+   account has not associated USDC, the page says so and offers the association as a
+   single signature; without it Hedera would reject the payout *after* the work is done.
+2. **Claim** a mission from the board. The claim is atomic — a second oracle claiming
+   the same mission gets a 409, not a silent overwrite.
+3. **Submit proof.** Every task carries a per-task **freshness code** that must appear
+   in the photo, which is what stops a stock image or a re-used shot from passing.
+4. **Get paid.** The notary reads the proof, quotes the code back in its verdict, and
+   the payout settles to your account in seconds — 0.44 USDC of a 0.50 task after the
+   12% platform fee.
 
 ---
 
@@ -292,6 +310,7 @@ Everything chain-facing is env-driven. The two switches worth knowing:
 |---|---|---|
 | `PAYMENT_ASSET_ID` | `0.0.429274` (USDC) | Set to `0.0.0` to run the whole app in native HBAR — no token association needed |
 | `X402_FACILITATOR_URL` | `https://api.testnet.blocky402.com` | Any Hedera-capable facilitator. `https://x402.org/facilitator` also works |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | unset | Enables the HashPack connect button ([free id](https://cloud.reown.com)). Unset is a supported state — the mission page falls back to pasting an account id |
 
 Everything above and the common options are in [`.env.example`](.env.example). A few advanced knobs are read straight from the environment: `AUTO_ACCEPT` (set `false` to require manual review for every payout), `VISION_*`, `FORM_JUDGE_*`, `MIRROR_LOOKUP_*`, `PROOF_MAX_BYTES`, `HEDERA_MAX_TX_FEE_HBAR`.
 
